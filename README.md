@@ -107,3 +107,7 @@ Deploy seamlessly to [Vercel](https://vercel.com):
 npm run build
 ```
 Add your `ANTHROPIC_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, and `NEXT_PUBLIC_SUPABASE_ANON_KEY` to Vercel Environment Variables.
+
+
+
+just a duplicate worksapce w deepa for useless projects 

@@ -119,6 +119,7 @@ export async function fetchAllGraves(): Promise<Grave[]> {
             zone: g.zone,
             epitaph: g.epitaph,
             is_haunted: Boolean(g.is_haunted),
+            ghosted_by: g.ghosted_by || undefined,
             created_at: g.created_at,
             reactions: {
               incense: incenseReactions.length,
@@ -146,9 +147,10 @@ export async function fetchAllGraves(): Promise<Grave[]> {
 export async function saveNewGrave(params: {
   victim_text: string;
   time_of_death_hours: number;
-  cause_of_death: CauseOfDeath;
+  cause_of_death?: CauseOfDeath;
   epitaph: string;
   is_haunted?: boolean;
+  ghosted_by?: string;
 }): Promise<Grave> {
   const id = 'grave-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 7);
   const zone = params.victim_text.length > 200 ? 'trench' : 'hill';
@@ -160,10 +162,11 @@ export async function saveNewGrave(params: {
     id,
     victim_text: params.victim_text,
     time_of_death_hours: params.time_of_death_hours,
-    cause_of_death: params.cause_of_death,
+    cause_of_death: params.cause_of_death || 'ghosting',
     zone,
     epitaph: params.epitaph,
     is_haunted,
+    ghosted_by: params.ghosted_by?.trim() || undefined,
     created_at,
     reactions: {
       incense: 0,
@@ -190,6 +193,7 @@ export async function saveNewGrave(params: {
         zone: newGrave.zone,
         epitaph: newGrave.epitaph,
         is_haunted: newGrave.is_haunted,
+        ghosted_by: newGrave.ghosted_by,
         created_at: newGrave.created_at
       });
     } catch (err) {

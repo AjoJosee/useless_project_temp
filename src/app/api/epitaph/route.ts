@@ -34,16 +34,18 @@ const FALLBACK_EPITAPHS: Record<string, string[]> = {
 
 export async function POST(req: NextRequest) {
   try {
-    const { victim_text, cause_of_death, time_of_death_hours } = await req.json();
+    const { victim_text, cause_of_death, time_of_death_hours, ghosted_by } = await req.json();
     const timeStr = time_of_death_hours >= 48 
       ? `${Math.round(time_of_death_hours / 24)} days` 
       : `${time_of_death_hours} hours`;
+    const ghostedByStr = ghosted_by ? `Ghosted by: ${ghosted_by}. ` : '';
+    const promptText = `${ghostedByStr}Cause of death: ${cause_of_death || 'ghosting'}. Time since read: ${timeStr}. The message: ${victim_text}`;
 
     // 1. Check Google Gemini Key (Gemini 3.6 Flash)
     const geminiKey = process.env.GEMINI_API_KEY;
     if (geminiKey && !geminiKey.includes('placeholder')) {
       try {
-                const modelsToTry = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-flash-latest'];
+        const modelsToTry = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-flash-latest'];
         for (const modelName of modelsToTry) {
           try {
             const geminiRes = await fetch(
@@ -63,7 +65,7 @@ export async function POST(req: NextRequest) {
                     {
                       parts: [
                         {
-                          text: `Cause of death: ${cause_of_death}. Time since read: ${timeStr}. The message: ${victim_text}`
+                          text: promptText
                         }
                       ]
                     }
@@ -106,7 +108,7 @@ export async function POST(req: NextRequest) {
           messages: [
             {
               role: 'user',
-              content: `Cause of death: ${cause_of_death}. Time since read: ${timeStr}. The message: ${victim_text}`
+              content: promptText
             }
           ]
         });

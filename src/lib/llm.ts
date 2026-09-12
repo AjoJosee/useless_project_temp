@@ -2,14 +2,18 @@ import { CauseOfDeath } from '../types';
 
 export async function generateEpitaph(params: {
   victim_text: string;
-  cause_of_death: CauseOfDeath;
+  cause_of_death?: CauseOfDeath;
   time_of_death_hours: number;
+  ghosted_by?: string;
 }): Promise<string> {
   try {
     const res = await fetch('/api/epitaph', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(params)
+      body: JSON.stringify({
+        ...params,
+        cause_of_death: params.cause_of_death || 'ghosting'
+      })
     });
     if (res.ok) {
       const data = await res.json();

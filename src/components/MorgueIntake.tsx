@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { CauseOfDeath, Grave } from '../types';
-import { CAUSES_OF_DEATH, INTAKE_PRESETS } from '../lib/constants';
+import { Grave } from '../types';
+import { INTAKE_PRESETS } from '../lib/constants';
 import { generateEpitaph } from '../lib/llm';
 import { saveNewGrave } from '../lib/storage';
 import { DustParticles } from './DustParticles';
 import { GriefLoadingSequence } from './GriefLoadingSequence';
 import { DeathCertificate } from './DeathCertificate';
-import { Clock, HelpCircle, FileText, AlertTriangle, Sparkles, Send } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { sound } from '../lib/audio';
 
 interface MorgueIntakeProps {
@@ -16,13 +16,25 @@ interface MorgueIntakeProps {
   onGoToGraveyard: () => void;
 }
 
+const GHOSTED_BY_OPTIONS = [
+  'Crush',
+  'Coworker',
+  'Friend',
+  'Mom',
+  'Dad',
+  'Bro',
+  'Sis',
+  'Other'
+];
+
 export const MorgueIntake: React.FC<MorgueIntakeProps> = ({
   onBuryComplete,
   onGoToGraveyard
 }) => {
   const [victimText, setVictimText] = useState('');
   const [timeHours, setTimeHours] = useState<number>(48);
-  const [causeOfDeath, setCauseOfDeath] = useState<CauseOfDeath>('ghosting');
+  const [ghostedBySelect, setGhostedBySelect] = useState<string>('');
+  const [ghostedByOther, setGhostedByOther] = useState<string>('');
   const [forceHaunted, setForceHaunted] = useState<boolean>(false);
 
   // States for burial sequence
@@ -32,21 +44,21 @@ export const MorgueIntake: React.FC<MorgueIntakeProps> = ({
   const [generatedGrave, setGeneratedGrave] = useState<Grave | null>(null);
   const [backendReady, setBackendReady] = useState(false);
 
-  // Zone derivation
-  const isTrench = victimText.trim().length > 200;
-  const zoneName = isTrench ? 'Trench of Tragic Paragraphs' : 'Hill of Left-on-Read Memes';
+  const effectiveGhostedBy = ghostedBySelect === 'Other' ? ghostedByOther.trim() : ghostedBySelect;
 
   const handleApplyPreset = (preset: typeof INTAKE_PRESETS[0]) => {
     setVictimText(preset.text);
-    setCauseOfDeath(preset.cause);
     setTimeHours(preset.hours);
+    if ('ghosted_by' in preset && typeof preset.ghosted_by === 'string') {
+      setGhostedBySelect(preset.ghosted_by);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!victimText.trim()) return;
 
-    // Sequence Step 1: Screen dims (overlay fades to ~70% black, 400ms)
+    // Sequence Step 1: Screen dims
     setIsDimming(true);
 
     // Sequence Step 2: Play shovel-dig sound effect
@@ -62,16 +74,18 @@ export const MorgueIntake: React.FC<MorgueIntakeProps> = ({
     try {
       const epitaph = await generateEpitaph({
         victim_text: victimText.trim(),
-        cause_of_death: causeOfDeath,
-        time_of_death_hours: timeHours
+        cause_of_death: 'ghosting',
+        time_of_death_hours: timeHours,
+        ghosted_by: effectiveGhostedBy || undefined
       });
 
       const newGrave = await saveNewGrave({
         victim_text: victimText.trim(),
         time_of_death_hours: timeHours,
-        cause_of_death: causeOfDeath,
+        cause_of_death: 'ghosting',
         epitaph,
-        is_haunted: forceHaunted ? true : undefined
+        is_haunted: forceHaunted ? true : undefined,
+        ghosted_by: effectiveGhostedBy || undefined
       });
 
       setGeneratedGrave(newGrave);
@@ -79,13 +93,13 @@ export const MorgueIntake: React.FC<MorgueIntakeProps> = ({
       onBuryComplete(newGrave);
     } catch (err) {
       console.error('Failed burial processing:', err);
-      // Fallback grave if network/LLM crashes
       const fallbackGrave = await saveNewGrave({
         victim_text: victimText.trim(),
         time_of_death_hours: timeHours,
-        cause_of_death: causeOfDeath,
+        cause_of_death: 'ghosting',
         epitaph: 'Sent with hope; buried in silent indifference.',
-        is_haunted: forceHaunted ? true : undefined
+        is_haunted: forceHaunted ? true : undefined,
+        ghosted_by: effectiveGhostedBy || undefined
       });
       setGeneratedGrave(fallbackGrave);
       setBackendReady(true);
@@ -103,6 +117,8 @@ export const MorgueIntake: React.FC<MorgueIntakeProps> = ({
     setGeneratedGrave(null);
     setBackendReady(false);
     setVictimText('');
+    setGhostedBySelect('');
+    setGhostedByOther('');
     setTimeHours(48);
   };
 
@@ -118,7 +134,7 @@ export const MorgueIntake: React.FC<MorgueIntakeProps> = ({
   }
 
   return (
-    <section className="relative mx-auto max-w-4xl px-4 py-8 sm:px-6">
+    <section className="relative mx-auto max-w-2xl px-4 py-8 sm:px-6">
       {/* Screen Dimming Overlay */}
       {isDimming && (
         <div className="fixed inset-0 z-45 bg-black/75 transition-opacity duration-400 pointer-events-none" />
@@ -135,33 +151,32 @@ export const MorgueIntake: React.FC<MorgueIntakeProps> = ({
         />
       )}
 
-      {/* Coroner Intake Container */}
-      <div className="relative rounded-xl border border-zinc-800 bg-zinc-900/90 p-6 sm:p-8 shadow-2xl backdrop-blur-sm">
-        {/* Top File Folder Tab */}
-        <div className="flex flex-wrap items-center justify-between border-b border-zinc-800 pb-5">
+      {/* Clean Intake Card */}
+      <div className="relative rounded-2xl border border-zinc-800 bg-zinc-900/90 p-6 sm:p-8 shadow-2xl backdrop-blur-sm">
+        {/* Header */}
+        <div className="flex flex-wrap items-center justify-between border-b border-zinc-800/80 pb-4">
           <div>
             <div className="flex items-center space-x-2">
               <span className="rounded bg-red-950/80 px-2 py-0.5 font-mono text-xs font-bold uppercase tracking-widest text-red-400 border border-red-800/60">
-                FORM CR-404
+                RIP
               </span>
               <h2 className="font-gothic text-2xl font-bold tracking-wide text-zinc-100 sm:text-3xl">
-                CORONER&apos;S INTAKE DESK
+                Bury a Ghosted Text
               </h2>
             </div>
-            <p className="mt-1 text-xs text-zinc-400 font-mono">
-              OFFICIAL INVESTIGATION INTO UNRETURNED DIGITAL DISPATCHES
+            <p className="mt-1 text-xs text-zinc-400">
+              Give your unread messages a proper resting place.
             </p>
           </div>
 
-          {/* Quick preset selector */}
+          {/* Quick preset chips */}
           <div className="mt-3 sm:mt-0 flex items-center space-x-1.5 overflow-x-auto pb-1 sm:pb-0">
-            <span className="text-[11px] font-mono text-zinc-500 mr-1">Load Preset:</span>
-            {INTAKE_PRESETS.map((p) => (
+            {INTAKE_PRESETS.slice(0, 3).map((p) => (
               <button
                 key={p.label}
                 type="button"
                 onClick={() => handleApplyPreset(p)}
-                className="rounded border border-zinc-700 bg-zinc-800/80 px-2 py-1 text-[11px] text-zinc-300 hover:border-red-600/60 hover:text-white transition-colors whitespace-nowrap"
+                className="rounded border border-zinc-800 bg-zinc-800/80 px-2 py-1 text-[11px] text-zinc-300 hover:border-red-600/60 hover:text-white transition-colors whitespace-nowrap"
               >
                 {p.label}
               </button>
@@ -170,88 +185,56 @@ export const MorgueIntake: React.FC<MorgueIntakeProps> = ({
         </div>
 
         {/* Intake Form */}
-        <form onSubmit={handleSubmit} className="mt-6 space-y-6">
-          {/* Field 1: The Victim (Textarea) */}
+        <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+          {/* Message Textarea */}
           <div>
-            <div className="flex items-center justify-between">
-              <label htmlFor="victim-text" className="flex items-center space-x-1.5 text-sm font-semibold text-zinc-200">
-                <span>The Victim</span>
-                <span className="text-red-500">*</span>
-                <span className="text-xs font-normal text-zinc-400">
-                  (Paste the deceased text message verbatim)
-                </span>
-              </label>
-
-              {/* Dynamic Zone Allocation Badge */}
-              <span
-                className={`rounded-full px-2.5 py-0.5 text-[11px] font-mono border transition-colors ${
-                  isTrench
-                    ? 'border-purple-800/80 bg-purple-950/60 text-purple-300'
-                    : 'border-cyan-800/80 bg-cyan-950/60 text-cyan-300'
-                }`}
-              >
-                Destined for: {zoneName} ({victimText.length} chars)
-              </span>
-            </div>
-
-            <div className="relative mt-2">
-              <textarea
-                id="victim-text"
-                rows={4}
-                required
-                value={victimText}
-                onChange={(e) => setVictimText(e.target.value)}
-                placeholder="e.g. 'Hey, had a great time last night! Let me know if you want to get tacos again this Thursday?'"
-                className="w-full rounded-lg border border-zinc-700 bg-zinc-950/90 p-3.5 font-tombstone text-base text-zinc-100 placeholder-zinc-600 focus:border-red-600 focus:outline-none focus:ring-1 focus:ring-red-600 leading-relaxed shadow-inner"
-              />
-            </div>
-            <p className="mt-1 text-[11px] text-zinc-500 font-mono">
-              &gt; 200 characters qualifies as a paragraph and will be interned in the muddy Trench of Tragic Paragraphs.
-            </p>
-          </div>
-
-          {/* Field 2: Suspected Cause of Death (Cards Selection) */}
-          <div>
-            <label className="block text-sm font-semibold text-zinc-200 mb-2">
-              Suspected Cause of Death
+            <label htmlFor="victim-text" className="block text-sm font-medium text-zinc-200 mb-1.5">
+              The message that got ghosted
             </label>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {(Object.values(CAUSES_OF_DEATH)).map((cause) => {
-                const isSelected = causeOfDeath === cause.id;
-                return (
-                  <div
-                    key={cause.id}
-                    onClick={() => setCauseOfDeath(cause.id)}
-                    className={`cursor-pointer rounded-lg border p-3.5 transition-all ${
-                      isSelected
-                        ? 'border-red-500 bg-red-950/30 shadow-[0_0_15px_rgba(239,68,68,0.15)] ring-1 ring-red-500/50'
-                        : 'border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 hover:bg-zinc-900/60'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-2.5">
-                      {(() => { const CauseIcon = cause.icon; return <CauseIcon className="h-5 w-5 flex-shrink-0" />; })()}
-                      <div>
-                        <h4 className={`text-sm font-bold ${isSelected ? 'text-red-300' : 'text-zinc-200'}`}>
-                          {cause.name}
-                        </h4>
-                        <span className="text-[10px] font-mono text-zinc-500 block">
-                          {cause.tagline}
-                        </span>
-                      </div>
-                    </div>
-                    <p className="mt-2 text-xs text-zinc-400 font-tombstone italic line-clamp-2">
-                      &ldquo;{cause.flavor}&rdquo;
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
+            <textarea
+              id="victim-text"
+              rows={4}
+              required
+              value={victimText}
+              onChange={(e) => setVictimText(e.target.value)}
+              placeholder="Paste the message you sent that was left to die on read..."
+              className="w-full rounded-xl border border-zinc-700 bg-zinc-950/90 p-3.5 font-sans text-sm sm:text-base text-zinc-100 placeholder-zinc-600 focus:border-red-600 focus:outline-none focus:ring-1 focus:ring-red-600 leading-relaxed shadow-inner"
+            />
           </div>
 
-          {/* Field 3: Time of Death (Hours/Days since read) */}
-          <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
+          {/* New Optional Field: Who ghosted you? */}
+          <div>
+            <label htmlFor="ghosted-by-select" className="block text-sm font-medium text-zinc-200 mb-1.5">
+              Who ghosted you? <span className="text-zinc-500 font-normal text-xs">(Optional)</span>
+            </label>
+            <select
+              id="ghosted-by-select"
+              value={ghostedBySelect}
+              onChange={(e) => setGhostedBySelect(e.target.value)}
+              className="w-full rounded-lg border border-zinc-700 bg-zinc-950 p-2.5 text-sm text-zinc-200 focus:border-red-600 focus:outline-none"
+            >
+              <option value="">Select someone...</option>
+              {GHOSTED_BY_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+
+            {/* Free text input if Other is picked */}
+            {ghostedBySelect === 'Other' && (
+              <input
+                type="text"
+                placeholder="e.g. Hinge match, Landlord, My personal trainer..."
+                value={ghostedByOther}
+                onChange={(e) => setGhostedByOther(e.target.value)}
+                className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 p-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:border-red-600 focus:outline-none"
+              />
+            )}
+          </div>
+
+          {/* Time of Death (Hours/Days since read - kept as-is) */}
+          <div className="rounded-xl border border-zinc-800 bg-zinc-950/50 p-4">
             <div className="flex items-center justify-between">
-              <label htmlFor="time-slider" className="flex items-center space-x-1.5 text-sm font-semibold text-zinc-200">
+              <label htmlFor="time-slider" className="flex items-center space-x-1.5 text-sm font-medium text-zinc-200">
                 <Clock className="h-4 w-4 text-red-400" />
                 <span>Time of Death</span>
               </label>
@@ -286,32 +269,28 @@ export const MorgueIntake: React.FC<MorgueIntakeProps> = ({
             </div>
           </div>
 
-          {/* Optional: Paranormal Testing Checkbox */}
-          <div className="flex items-center justify-between rounded-lg border border-zinc-800/80 bg-zinc-950/30 px-3 py-2">
-            <label className="flex items-center space-x-2 text-xs text-zinc-400 cursor-pointer">
+          {/* Simplified Vague Tempt Fate Checkbox */}
+          <div className="flex items-center justify-between rounded-lg border border-zinc-800/80 bg-zinc-950/30 px-3.5 py-2.5">
+            <label className="flex items-center space-x-2.5 text-xs text-zinc-300 cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={forceHaunted}
                 onChange={(e) => setForceHaunted(e.target.checked)}
                 className="rounded border-zinc-700 bg-zinc-900 text-emerald-500 focus:ring-0"
               />
-              <span>Guarantee Paranormal Haunting (~15% natural probability)</span>
+              <span>Tempt fate?</span>
             </label>
-            <span className="text-[10px] font-mono text-emerald-400/80">👻 Enables Ouija Spirit</span>
           </div>
 
-          {/* Burial Action Button */}
+          {/* Clean Bury Button */}
           <div className="pt-2">
             <button
               type="submit"
               disabled={!victimText.trim()}
-              className="group relative flex w-full items-center justify-center space-x-3 rounded-lg bg-gradient-to-r from-red-800 via-red-700 to-red-800 py-4 font-gothic text-lg font-bold tracking-wider text-white shadow-[0_0_20px_rgba(220,38,38,0.3)] transition-all hover:scale-[1.01] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+              className="group relative flex w-full items-center justify-center space-x-2 rounded-xl bg-red-700 hover:bg-red-600 py-3.5 font-gothic text-base font-bold tracking-wider text-white shadow-lg shadow-red-950/50 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <span className="text-xl transition-transform group-hover:rotate-12">⛏️</span>
-              <span>BURY IN GRAVEYARD</span>
-              <span className="text-xs font-mono font-normal opacity-70 ml-2 tracking-normal">
-                (Initiate Autopsy & Closure)
-              </span>
+              <span>⛏️</span>
+              <span>Bury Text</span>
             </button>
           </div>
         </form>

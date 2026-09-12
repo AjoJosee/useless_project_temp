@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS public.graves (
     zone TEXT NOT NULL CHECK (zone IN ('trench', 'hill')),
     epitaph TEXT NOT NULL,
     is_haunted BOOLEAN NOT NULL DEFAULT false,
+    ghosted_by TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 

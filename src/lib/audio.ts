@@ -5,6 +5,7 @@ class SoundEngine {
   private ambientGain: GainNode | null = null;
   private ambientFilter: BiquadFilterNode | null = null;
   private ambientRunning: boolean = false;
+  private ambientRequested: boolean = false;
   private listeners: Array<(muted: boolean) => void> = [];
 
   constructor() {
@@ -42,7 +43,9 @@ class SoundEngine {
       this.stopAmbientWind();
     } else {
       this.initCtx();
-      this.startAmbientWind();
+      if (this.ambientRequested) {
+        this.startAmbientWind();
+      }
     }
     this.notify();
     return this.isMuted;
@@ -258,6 +261,7 @@ class SoundEngine {
 
   // Soft Ambient Graveyard Wind Loop (mutable)
   public startAmbientWind() {
+    this.ambientRequested = true;
     if (this.isMuted || this.ambientRunning) return;
     const ctx = this.initCtx();
     if (!ctx) return;
@@ -280,12 +284,33 @@ class SoundEngine {
 
       const filter = ctx.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.value = 280;
+      filter.frequency.value = 220;
       this.ambientFilter = filter;
+
+      // Layer in a low, eerie sub-drone (55 Hz harmonic)
+      const drone = ctx.createOscillator();
+      drone.type = 'sine';
+      drone.frequency.setValueAtTime(55, ctx.currentTime);
+
+      // Slow LFO for subtle pitch detune drift
+      const lfo = ctx.createOscillator();
+      lfo.frequency.value = 0.2;
+      const lfoGain = ctx.createGain();
+      lfoGain.gain.value = 1.5;
+      lfo.connect(lfoGain);
+      lfoGain.connect(drone.frequency);
+      lfo.start();
+
+      const droneGain = ctx.createGain();
+      droneGain.gain.setValueAtTime(0.001, ctx.currentTime);
+      droneGain.gain.linearRampToValueAtTime(0.04, ctx.currentTime + 3);
+      drone.connect(droneGain);
+      droneGain.connect(ctx.destination);
+      drone.start();
 
       const gain = ctx.createGain();
       gain.gain.setValueAtTime(0.001, ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(0.07, ctx.currentTime + 3);
+      gain.gain.linearRampToValueAtTime(0.06, ctx.currentTime + 3);
       this.ambientGain = gain;
 
       noise.connect(filter);
@@ -300,6 +325,7 @@ class SoundEngine {
   }
 
   public stopAmbientWind() {
+    this.ambientRequested = false;
     if (!this.ambientRunning || !this.ambientGain || !this.ctx) return;
     try {
       this.ambientGain.gain.linearRampToValueAtTime(0.0001, this.ctx.currentTime + 0.8);
@@ -313,8 +339,6 @@ class SoundEngine {
     }
   }
 
-  // Jumpscare Sting: sharp broadband noise burst + fast pitch-drop oscillator
-  // Visual overlay always fires; this method is only called when not muted.
   // Eerie digital glitch stutter
   public playEerieGlitch() {
     if (this.isMuted) return;
@@ -356,6 +380,7 @@ class SoundEngine {
     });
   }
 
+  // Harsh, loud, dissonant jumpscare sting with scream quality (<0.6s)
   playJumpscareSting() {
     if (this.isMuted) return;
     const ctx = this.initCtx();
@@ -363,74 +388,95 @@ class SoundEngine {
 
     const t = ctx.currentTime;
 
-    // --- Layer 1: sharp broadband noise burst (the "hit") ---
-    const burstSize = Math.floor(ctx.sampleRate * 0.18);
+    // --- Layer 1: Short high-amplitude noise burst (<0.25s) ---
+    // Similar structure to playShovelDig's noise buffer, but louder gain & less filtering for harsh piercing bite
+    const burstSize = Math.floor(ctx.sampleRate * 0.25);
     const burstBuf = ctx.createBuffer(1, burstSize, ctx.sampleRate);
     const burstData = burstBuf.getChannelData(0);
     for (let i = 0; i < burstSize; i++) {
-      // Instant attack, fast exponential decay
-      burstData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.025));
+      burstData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.045));
     }
     const burstSrc = ctx.createBufferSource();
     burstSrc.buffer = burstBuf;
 
     const burstFilter = ctx.createBiquadFilter();
     burstFilter.type = 'highpass';
-    burstFilter.frequency.setValueAtTime(800, t);
+    burstFilter.frequency.setValueAtTime(450, t);
+
+    // Peaking presence for piercing grit
+    const presenceFilter = ctx.createBiquadFilter();
+    presenceFilter.type = 'peaking';
+    presenceFilter.frequency.setValueAtTime(2600, t);
+    presenceFilter.gain.setValueAtTime(9, t);
+    presenceFilter.Q.setValueAtTime(1.8, t);
 
     const burstGain = ctx.createGain();
     burstGain.gain.setValueAtTime(0.0, t);
-    burstGain.gain.linearRampToValueAtTime(0.9, t + 0.005); // near-instant slam
-    burstGain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+    burstGain.gain.linearRampToValueAtTime(1.0, t + 0.003); // loud immediate slam
+    burstGain.gain.exponentialRampToValueAtTime(0.001, t + 0.24);
 
     burstSrc.connect(burstFilter);
-    burstFilter.connect(burstGain);
+    burstFilter.connect(presenceFilter);
+    presenceFilter.connect(burstGain);
     burstGain.connect(ctx.destination);
 
-    // --- Layer 2: pitch-drop oscillator (the "scream drop") ---
-    const osc = ctx.createOscillator();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(1400, t);           // start high and screechy
-    osc.frequency.exponentialRampToValueAtTime(60, t + 0.55); // drop fast
-
-    const oscGain = ctx.createGain();
-    oscGain.gain.setValueAtTime(0.0, t);
-    oscGain.gain.linearRampToValueAtTime(0.55, t + 0.01);
-    oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
-
-    // Slight distortion via waveshaper for extra harshness
+    // --- Layer 2: Two dissonant scream oscillators (descending-then-jumping, <0.55s) ---
     const waveshaper = ctx.createWaveShaper();
     const curve = new Float32Array(256);
     for (let i = 0; i < 256; i++) {
       const x = (i * 2) / 256 - 1;
-      curve[i] = (Math.PI + 200) * x / (Math.PI + 200 * Math.abs(x));
+      curve[i] = (Math.PI + 180) * x / (Math.PI + 180 * Math.abs(x));
     }
     waveshaper.curve = curve;
 
-    osc.connect(waveshaper);
+    const oscGain = ctx.createGain();
+    oscGain.gain.setValueAtTime(0.0, t);
+    oscGain.gain.linearRampToValueAtTime(0.85, t + 0.008);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
+
+    // Oscillator 1: Sawtooth starting high, sharply descending, then jumping up
+    const osc1 = ctx.createOscillator();
+    osc1.type = 'sawtooth';
+    osc1.frequency.setValueAtTime(1750, t);
+    osc1.frequency.exponentialRampToValueAtTime(320, t + 0.22); // sharp descending
+    osc1.frequency.exponentialRampToValueAtTime(1250, t + 0.40); // sharp screech jump
+    osc1.frequency.exponentialRampToValueAtTime(450, t + 0.55);
+
+    // Oscillator 2: Clashing dissonant interval for horrifying grating scream texture
+    const osc2 = ctx.createOscillator();
+    osc2.type = 'sawtooth';
+    osc2.frequency.setValueAtTime(1880, t); // dissonant clashing interval
+    osc2.frequency.exponentialRampToValueAtTime(360, t + 0.22);
+    osc2.frequency.exponentialRampToValueAtTime(1320, t + 0.40);
+    osc2.frequency.exponentialRampToValueAtTime(490, t + 0.55);
+
+    osc1.connect(waveshaper);
+    osc2.connect(waveshaper);
     waveshaper.connect(oscGain);
     oscGain.connect(ctx.destination);
 
-    // --- Layer 3: low sub-thud for physical impact feel ---
+    // --- Layer 3: Chest-hitting low sub thud (95Hz -> 25Hz, 0.28s) ---
     const subOsc = ctx.createOscillator();
     subOsc.type = 'sine';
-    subOsc.frequency.setValueAtTime(90, t);
-    subOsc.frequency.exponentialRampToValueAtTime(25, t + 0.3);
+    subOsc.frequency.setValueAtTime(95, t);
+    subOsc.frequency.exponentialRampToValueAtTime(25, t + 0.28);
 
     const subGain = ctx.createGain();
-    subGain.gain.setValueAtTime(0.7, t);
-    subGain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+    subGain.gain.setValueAtTime(0.85, t);
+    subGain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
 
     subOsc.connect(subGain);
     subGain.connect(ctx.destination);
 
-    // Fire everything
+    // Play all layers (<0.56s total duration)
     burstSrc.start(t);
-    burstSrc.stop(t + 0.2);
-    osc.start(t);
-    osc.stop(t + 0.6);
+    burstSrc.stop(t + 0.25);
+    osc1.start(t);
+    osc2.start(t);
+    osc1.stop(t + 0.56);
+    osc2.stop(t + 0.56);
     subOsc.start(t);
-    subOsc.stop(t + 0.35);
+    subOsc.stop(t + 0.30);
   }
 }
 

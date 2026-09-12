@@ -54,11 +54,14 @@ export const OuijaBoardModal: React.FC<OuijaBoardModalProps> = ({
   const [isQuaking, setIsQuaking] = useState(false);
   const [isJumpscare, setIsJumpscare] = useState(false);
   const [candlesBlownOut, setCandlesBlownOut] = useState(false);
+  const [isFlickeringBeforeReply, setIsFlickeringBeforeReply] = useState(false);
+  const [isBlackout, setIsBlackout] = useState(false);
 
   const boardRef = useRef<HTMLDivElement | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const escalationTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const blackoutTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load API key from local storage on mount
   useEffect(() => {
@@ -131,6 +134,10 @@ export const OuijaBoardModal: React.FC<OuijaBoardModalProps> = ({
           api_key: apiKey || undefined
         });
 
+        setIsFlickeringBeforeReply(true);
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        setIsFlickeringBeforeReply(false);
+
         sound.playPlanchetteScrape();
         setMessages((prev) => [
           ...prev,
@@ -146,6 +153,33 @@ export const OuijaBoardModal: React.FC<OuijaBoardModalProps> = ({
       }
     }, 20000);
   }, [escalationCount, grave, apiKey, triggerJumpscare]);
+
+  // Periodic random screen blackout/flicker (every 15-30s)
+  useEffect(() => {
+    if (!isOpen) {
+      if (blackoutTimerRef.current) clearTimeout(blackoutTimerRef.current);
+      setIsBlackout(false);
+      return;
+    }
+
+    const scheduleBlackout = () => {
+      const delay = Math.floor(Math.random() * 15000) + 15000;
+      blackoutTimerRef.current = setTimeout(() => {
+        setIsBlackout(true);
+        sound.playEerieGlitch();
+        setTimeout(() => {
+          setIsBlackout(false);
+          scheduleBlackout();
+        }, 220);
+      }, delay);
+    };
+
+    scheduleBlackout();
+
+    return () => {
+      if (blackoutTimerRef.current) clearTimeout(blackoutTimerRef.current);
+    };
+  }, [isOpen]);
 
   // Spelling animation that lands dead-center on letters and handles YES/NO
   const animateSpelling = useCallback((text: string, onDone: () => void) => {
@@ -229,7 +263,12 @@ export const OuijaBoardModal: React.FC<OuijaBoardModalProps> = ({
         victim_text: grave.victim_text,
         time_of_death_hours: grave.time_of_death_hours,
         api_key: apiKey || undefined
-      }).then((reply) => {
+      }).then(async (reply) => {
+        // Candle flickers erratically right before reply
+        setIsFlickeringBeforeReply(true);
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        setIsFlickeringBeforeReply(false);
+
         animateSpelling(reply, () => {
           setMessages([
             {
@@ -285,6 +324,11 @@ export const OuijaBoardModal: React.FC<OuijaBoardModalProps> = ({
       api_key: apiKey || undefined
     });
 
+    // Candle flickers erratically right before reply
+    setIsFlickeringBeforeReply(true);
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    setIsFlickeringBeforeReply(false);
+
     animateSpelling(reply, () => {
       setMessages((prev) => [
         ...prev,
@@ -327,6 +371,11 @@ export const OuijaBoardModal: React.FC<OuijaBoardModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-3 sm:p-6 overflow-y-auto">
+      {/* Full-screen Blackout / Glitch Flicker */}
+      {isBlackout && (
+        <div className="pointer-events-none fixed inset-0 z-50 bg-black animate-screen-flicker" />
+      )}
+
       {/* Jumpscare Spectral Overlay */}
       {isJumpscare && (
         <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-red-950/80 animate-jumpscare-flash backdrop-blur-sm">
@@ -507,9 +556,34 @@ export const OuijaBoardModal: React.FC<OuijaBoardModalProps> = ({
               </span>
             </div>
 
-            {/* Mystic Center Banner */}
-            <div className="text-center my-0.5 sm:my-1 font-cinzel text-[10px] sm:text-xs uppercase tracking-widest text-amber-400/70">
-              O U I J A
+            {/* Mystic Center Candle & Banner */}
+            <div className="flex flex-col items-center my-0.5 sm:my-1">
+              {/* Center Candle Visual */}
+              <div className="relative flex flex-col items-center select-none -mt-3 mb-1">
+                {/* Candle Flame */}
+                <div
+                  className={`h-5 w-2 sm:h-6 sm:w-2.5 rounded-full transition-all duration-200 ${
+                    candlesBlownOut
+                      ? 'opacity-0'
+                      : isFlickeringBeforeReply
+                      ? 'animate-erratic-flicker bg-gradient-to-t from-emerald-500 via-teal-200 to-white drop-shadow-[0_0_24px_#10b981]'
+                      : isSpelling
+                      ? 'animate-pulse scale-125 bg-gradient-to-t from-emerald-500 via-emerald-300 to-white drop-shadow-[0_0_18px_#34d399]'
+                      : 'animate-candle-flame bg-gradient-to-t from-amber-600 via-yellow-400 to-white drop-shadow-[0_0_10px_#f59e0b]'
+                  }`}
+                />
+                {/* Smoke wisp if blown out */}
+                {candlesBlownOut && (
+                  <div className="absolute -top-2 text-xs text-zinc-400 opacity-60">~</div>
+                )}
+                {/* Candle Stick & Pewter/Brass Base */}
+                <div className="h-4 sm:h-5 w-2 sm:w-2.5 rounded-t-sm bg-gradient-to-b from-zinc-200 to-zinc-400 shadow-sm" />
+                <div className="h-1 w-5 sm:w-6 rounded-full bg-amber-700/80 border border-amber-600/60 shadow-sm" />
+              </div>
+
+              <div className="text-center font-cinzel text-[10px] sm:text-xs uppercase tracking-widest text-amber-400/70">
+                O U I J A
+              </div>
             </div>
 
             {/* ARC OF LETTERS A-M */}

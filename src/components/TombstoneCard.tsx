@@ -2,53 +2,51 @@
 
 import React, { useState } from 'react';
 import { Grave, ReactionType } from '../types';
-import { CAUSES_OF_DEATH } from '../lib/constants';
 import { hasUserReacted, addGraveReaction } from '../lib/storage';
 import { sound } from '../lib/audio';
-import { Sparkles, MessageSquare, ChevronDown, ChevronUp, Share2, Award, Flame, Beer, Ghost, Check } from 'lucide-react';
+import { Flame, Beer, Award } from 'lucide-react';
 
 interface TombstoneCardProps {
   grave: Grave;
   onOpenOuija: (grave: Grave) => void;
-  onOpenComments: (grave: Grave) => void;
   onReactionUpdate: () => void;
 }
 
 export const TombstoneCard: React.FC<TombstoneCardProps> = ({
   grave,
   onOpenOuija,
-  onOpenComments,
   onReactionUpdate
 }) => {
-  const [isExhumed, setIsExhumed] = useState(false);
   const [showSplash, setShowSplash] = useState(false);
-  const [copiedLink, setCopiedLink] = useState(false);
   const [reactionNotice, setReactionNotice] = useState<string | null>(null);
 
-  const causeInfo = CAUSES_OF_DEATH[grave.cause_of_death] || CAUSES_OF_DEATH.ghosting;
-  
   // Calculate relative time
   const getRelativeBurialTime = (dateStr: string) => {
     const diffMs = Date.now() - new Date(dateStr).getTime();
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     if (diffHours < 1) return 'Just laid to rest';
-    if (diffHours < 24) return `${diffHours} hours in the ground`;
+    if (diffHours < 24) return `${diffHours}h in the ground`;
     const diffDays = Math.floor(diffHours / 24);
     if (diffDays === 1) return '1 day in the ground';
     return `${diffDays} days in the ground`;
   };
 
   // Reactions
-  const incenseCount = grave.reactions?.incense || 0;
-  const activeIncenseCount = grave.reactions?.recent_incense_count ?? 0;
+  const candleCount = grave.reactions?.incense || 0;
+  const activeCandleCount = grave.reactions?.recent_incense_count ?? 0;
   const pourCount = grave.reactions?.pour_one_out || 0;
   const soldierCount = grave.reactions?.fallen_soldier || 0;
-  const commentsCount = grave.comments?.length || 0;
 
-  // Has active incense smoking
-  const hasActiveIncense = activeIncenseCount > 0;
+  const hasActiveCandle = activeCandleCount > 0;
+  const isOldGrave = grave.time_of_death_hours >= 168; // 1 week+
+  const tiltClass = isOldGrave
+    ? grave.time_of_death_hours % 2 === 0
+      ? '-rotate-1 hover:rotate-0'
+      : 'rotate-1 hover:rotate-0'
+    : '';
 
-  const handleReaction = async (type: ReactionType) => {
+  const handleReaction = async (e: React.MouseEvent, type: ReactionType) => {
+    e.stopPropagation();
     if (type === 'pour_one_out') {
       setShowSplash(true);
       sound.playPourSplash();
@@ -68,235 +66,149 @@ export const TombstoneCard: React.FC<TombstoneCardProps> = ({
     }
   };
 
-  const handleCopyLink = () => {
-    if (typeof window === 'undefined') return;
-    const url = `${window.location.origin}/?grave=${grave.id}`;
-    navigator.clipboard.writeText(url).then(() => {
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2000);
-    });
+  const handleCardClick = () => {
+    if (grave.is_haunted) {
+      onOpenOuija(grave);
+    }
   };
 
   return (
     <div
-      className={`group relative flex flex-col rounded-t-3xl rounded-b-lg border-2 bg-gradient-to-b from-[#1c1f2b] to-[#12141c] p-5 sm:p-6 shadow-xl transition-all duration-300 ${
+      onClick={handleCardClick}
+      className={`group relative mx-auto flex w-full max-w-[280px] flex-col justify-between rounded-t-[4.5rem] rounded-b-md border-2 p-5 sm:p-6 shadow-2xl transition-all duration-300 ${tiltClass} ${
         grave.is_haunted
-          ? 'haunted-card hover:scale-[1.02] cursor-pointer'
-          : 'border-zinc-800 hover:border-zinc-700 hover:shadow-2xl hover:scale-[1.01]'
+          ? 'haunted-card cursor-pointer bg-gradient-to-b from-[#242c26] via-[#1a211c] to-[#121613] hover:scale-[1.03]'
+          : 'border-zinc-700/80 bg-gradient-to-b from-[#2a2e3a] via-[#1e222c] to-[#13161e] hover:border-zinc-500 hover:scale-[1.02]'
       }`}
     >
-      {/* Splash Animation Overlay for Pour One Out — CSS animation carries the visual */}
+      {/* Weathering crack lines for older graves (>1 week) */}
+      {isOldGrave && (
+        <svg
+          className="pointer-events-none absolute inset-0 h-full w-full opacity-25"
+          viewBox="0 0 280 400"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M 50 15 L 65 50 L 58 85 L 75 120 M 230 40 L 210 75 L 225 110 L 205 160"
+            stroke="#94a3b8"
+            strokeWidth="1.2"
+            strokeLinecap="round"
+          />
+        </svg>
+      )}
+
+      {/* Splash Animation Overlay for Pour One Out */}
       {showSplash && (
         <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
           <div className="animate-splash">
-            <Beer className="h-14 w-14 text-yellow-400" />
+            <Beer className="h-12 w-12 text-yellow-400" />
           </div>
         </div>
       )}
 
-      {/* Incense Smoke Wisps Animation if active (< 24h) */}
-      {hasActiveIncense && (
+      {/* Burning candle smoke wisps on top */}
+      {hasActiveCandle && (
         <div className="pointer-events-none absolute -top-8 right-6 z-20 flex space-x-1 select-none">
           <div className="relative">
-            <Flame className="h-3.5 w-3.5 text-amber-400" />
-            <div className="smoke-particle-1 absolute -top-3 left-1 text-base text-zinc-300 opacity-60">
-              ~
-            </div>
-            <div className="smoke-particle-2 absolute -top-6 left-0 text-sm text-zinc-400 opacity-40">
-              ~
-            </div>
-            <div className="smoke-particle-3 absolute -top-9 left-2 text-xs text-zinc-500 opacity-30">
-              ~
-            </div>
+            <Flame className="h-4 w-4 text-amber-400 animate-pulse" />
+            <div className="smoke-particle-1 absolute -top-3 left-1 text-base text-zinc-300 opacity-60">~</div>
+            <div className="smoke-particle-2 absolute -top-6 left-0 text-sm text-zinc-400 opacity-40">~</div>
           </div>
         </div>
       )}
 
-      {/* Haunted Ghost Banner if is_haunted */}
-      {grave.is_haunted && (
-        <div
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpenOuija(grave);
-          }}
-          className="mb-3 flex items-center justify-between rounded-lg border border-emerald-500/50 bg-emerald-950/40 px-3 py-1.5 text-xs text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.2)] hover:bg-emerald-900/40 transition-colors"
-        >
-          <div className="flex items-center space-x-1.5">
-            <Ghost className="h-4 w-4 text-emerald-400 animate-pulse" />
-            <span className="font-mono font-bold flicker-text">HAUNTED REMAINS</span>
-          </div>
-          <span className="font-mono text-[11px] underline underline-offset-2">
-            Summon Spirit via Ouija &rarr;
-          </span>
-        </div>
-      )}
-
-      {/* Tombstone Arch Top & Cause of Death */}
-      <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-        <div className="flex items-center space-x-2">
-          {(() => { const CauseIcon = causeInfo.icon; return <CauseIcon className="h-4 w-4 flex-shrink-0" />; })()}
-          <span className="font-mono text-xs font-semibold text-zinc-300 uppercase tracking-wider">
-            {causeInfo.name}
-          </span>
-        </div>
-
-        {/* Fallen Soldier Ribbon Badge if awarded or high bravery */}
-        {(soldierCount > 0 || grave.cause_of_death === 'one_word_assassin') && (
-          <div
-            title="Fallen Soldier: Commended for tragic conversational bravery"
-            className="flex items-center space-x-1 rounded bg-amber-950/60 border border-amber-600/50 px-2 py-0.5 text-[10px] font-mono text-amber-300"
-          >
-            <Award className="h-3 w-3 text-amber-400" />
-            <span>SALUTE</span>
+      {/* Top Headstone Header: Traditional R.I.P Inscription */}
+      <div className="text-center pt-2">
+        <span className="font-gothic text-xs tracking-[0.3em] text-zinc-400 select-none">
+          + R · I · P +
+        </span>
+        {grave.ghosted_by && (
+          <div className="mt-1 text-[11px] font-mono text-zinc-400">
+            Ghosted by: <span className="font-bold text-zinc-200">{grave.ghosted_by}</span>
           </div>
         )}
       </div>
 
-      {/* Stone Carved Epitaph */}
-      <div className="my-4 min-h-[56px] flex items-center justify-center text-center">
-        <p className="font-gothic text-lg font-bold tracking-wide text-zinc-100 sm:text-xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+      {/* Main Gravestone Face: Epitaph & Victim Text */}
+      <div className="my-4 text-center space-y-3">
+        {/* Epitaph carved deeply into stone */}
+        <p className={`font-gothic text-base sm:text-lg font-bold tracking-wide text-zinc-100 leading-snug drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)] ${isOldGrave ? 'flicker-text' : ''}`}>
           &ldquo;{grave.epitaph}&rdquo;
         </p>
-      </div>
 
-      {/* Burial Metadata */}
-      <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400">
-        <span>{getRelativeBurialTime(grave.created_at)}</span>
-        <span className="rounded bg-zinc-800/80 px-2 py-0.5 text-zinc-300">
-          {grave.zone === 'trench' ? 'Trench (Long)' : 'Hill (Short)'}
-        </span>
-      </div>
+        {/* The ghosted message shown directly on the face of the stone */}
+        <div className="rounded border border-zinc-800/80 bg-black/40 p-2.5 text-xs font-tombstone text-zinc-300 italic leading-relaxed line-clamp-4">
+          &ldquo;{grave.victim_text}&rdquo;
+        </div>
 
-      {/* Exhume Original Message Dropdown */}
-      <div className="mt-4 border-t border-zinc-800/80 pt-3">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsExhumed(!isExhumed);
-          }}
-          className="flex w-full items-center justify-between text-xs font-mono text-zinc-400 hover:text-zinc-200 transition-colors"
-        >
-          <span className="flex items-center space-x-1">
-            <span>{isExhumed ? 'Re-inter Remains' : 'Exhume Original Text'}</span>
-            <span className="text-[10px] opacity-70">({grave.victim_text.length} chars)</span>
-          </span>
-          {isExhumed ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-        </button>
-
-        {isExhumed && (
-          <div className="mt-2 rounded border border-zinc-700/60 bg-zinc-950/90 p-3 text-xs font-tombstone text-zinc-200 italic leading-relaxed">
-            &ldquo;{grave.victim_text}&rdquo;
-            <div className="mt-2 text-[10px] font-mono text-zinc-500 not-italic">
-              Deceased after {grave.time_of_death_hours}h without reply.
-            </div>
-          </div>
-        )}
+        {/* Time in ground */}
+        <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">
+          {getRelativeBurialTime(grave.created_at)}
+        </div>
       </div>
 
       {/* Reaction Notice Toast */}
       {reactionNotice && (
-        <div className="mt-2 rounded bg-red-950/90 border border-red-800/80 p-1.5 text-center text-[11px] font-mono text-red-300 animate-fade-in">
+        <div className="mb-2 rounded bg-red-950/90 border border-red-800/80 p-1 text-center text-[10px] font-mono text-red-300">
           {reactionNotice}
         </div>
       )}
 
-      {/* Interactive Reactions Bar */}
-      <div className="mt-4 grid grid-cols-3 gap-1.5 border-t border-zinc-800/80 pt-3">
-        {/* Incense Reaction */}
+      {/* Offerings / Reactions Bar */}
+      <div className="grid grid-cols-3 gap-1 border-t border-zinc-800/80 pt-3">
+        {/* 1. Light a Candle */}
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            handleReaction('incense');
-          }}
-          title="Burn Incense (Active smoke trail for 24h)"
-          className={`flex flex-col items-center justify-center rounded-lg border py-2 px-1 text-center transition-all ${
+          type="button"
+          onClick={(e) => handleReaction(e, 'incense')}
+          title="Light a Candle (Active smoke for 24h)"
+          className={`flex flex-col items-center justify-center rounded py-1.5 px-0.5 text-center transition-all ${
             hasUserReacted(grave.id, 'incense')
-              ? 'border-amber-700/50 bg-amber-950/30 text-amber-300'
-              : 'border-zinc-800/80 bg-zinc-900/60 text-zinc-400 hover:border-zinc-700 hover:bg-zinc-800/80 hover:text-zinc-200'
+              ? 'border border-amber-600/60 bg-amber-950/40 text-amber-300'
+              : 'border border-zinc-800 bg-zinc-900/60 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200'
           }`}
         >
           <div className="flex items-center space-x-1 text-xs">
-            <Flame className="h-3.5 w-3.5" />
-            <span className="font-mono font-bold text-xs">{incenseCount}</span>
+            <Flame className="h-3.5 w-3.5 text-amber-400" />
+            <span className="font-mono text-xs font-bold">{candleCount}</span>
           </div>
-          <span className="text-[10px] font-mono text-zinc-500 mt-0.5">
-            {hasActiveIncense ? 'Smoking' : 'Incense'}
-          </span>
+          <span className="text-[9px] font-mono text-zinc-500 mt-0.5 leading-none">Candle</span>
         </button>
 
-        {/* Pour One Out */}
+        {/* 2. Pour One Out */}
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            handleReaction('pour_one_out');
-          }}
-          title="Pour One Out (Splash drink on grave)"
-          className={`flex flex-col items-center justify-center rounded-lg border py-2 px-1 text-center transition-all ${
+          type="button"
+          onClick={(e) => handleReaction(e, 'pour_one_out')}
+          title="Pour One Out"
+          className={`flex flex-col items-center justify-center rounded py-1.5 px-0.5 text-center transition-all ${
             hasUserReacted(grave.id, 'pour_one_out')
-              ? 'border-yellow-700/50 bg-yellow-950/30 text-yellow-300'
-              : 'border-zinc-800/80 bg-zinc-900/60 text-zinc-400 hover:border-zinc-700 hover:bg-zinc-800/80 hover:text-zinc-200'
+              ? 'border border-yellow-600/60 bg-yellow-950/40 text-yellow-300'
+              : 'border border-zinc-800 bg-zinc-900/60 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200'
           }`}
         >
           <div className="flex items-center space-x-1 text-xs">
-            <Beer className="h-3.5 w-3.5" />
-            <span className="font-mono font-bold text-xs">{pourCount}</span>
+            <Beer className="h-3.5 w-3.5 text-yellow-400" />
+            <span className="font-mono text-xs font-bold">{pourCount}</span>
           </div>
-          <span className="text-[10px] font-mono text-zinc-500 mt-0.5">Pour Out</span>
+          <span className="text-[9px] font-mono text-zinc-500 mt-0.5 leading-none">Pour Out</span>
         </button>
 
-        {/* Fallen Soldier */}
+        {/* 3. Press F to Pay Respects */}
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            handleReaction('fallen_soldier');
-          }}
-          title="Fallen Soldier badge for brave texts"
-          className={`flex flex-col items-center justify-center rounded-lg border py-2 px-1 text-center transition-all ${
+          type="button"
+          onClick={(e) => handleReaction(e, 'fallen_soldier')}
+          title="Press F to Pay Respects"
+          className={`flex flex-col items-center justify-center rounded py-1.5 px-0.5 text-center transition-all ${
             hasUserReacted(grave.id, 'fallen_soldier')
-              ? 'border-red-700/50 bg-red-950/30 text-red-300'
-              : 'border-zinc-800/80 bg-zinc-900/60 text-zinc-400 hover:border-zinc-700 hover:bg-zinc-800/80 hover:text-zinc-200'
+              ? 'border border-red-600/60 bg-red-950/40 text-red-300'
+              : 'border border-zinc-800 bg-zinc-900/60 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200'
           }`}
         >
           <div className="flex items-center space-x-1 text-xs">
-            <Award className="h-3.5 w-3.5" />
-            <span className="font-mono font-bold text-xs">{soldierCount}</span>
+            <Award className="h-3.5 w-3.5 text-red-400" />
+            <span className="font-mono text-xs font-bold">{soldierCount}</span>
           </div>
-          <span className="text-[10px] font-mono text-zinc-500 mt-0.5">Salute</span>
-        </button>
-      </div>
-
-      {/* Card Footer: Exhumation Comments & Share */}
-      <div className="mt-3 flex items-center justify-between border-t border-zinc-800/60 pt-2 text-xs font-mono text-zinc-400">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpenComments(grave);
-          }}
-          className="flex items-center space-x-1.5 hover:text-zinc-200 transition-colors"
-        >
-          <MessageSquare className="h-3.5 w-3.5 text-zinc-500" />
-          <span>Eulogies ({commentsCount})</span>
-        </button>
-
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            handleCopyLink();
-          }}
-          title="Copy permalink to this grave"
-          className="flex items-center space-x-1 hover:text-zinc-200 transition-colors"
-        >
-          {copiedLink ? (
-            <>
-              <Check className="h-3 w-3 text-emerald-400" />
-              <span className="text-emerald-400">Copied</span>
-            </>
-          ) : (
-            <>
-              <Share2 className="h-3 w-3 text-zinc-500" />
-              <span>Share</span>
-            </>
-          )}
+          <span className="text-[9px] font-mono text-zinc-500 mt-0.5 leading-none">Pay Respects</span>
         </button>
       </div>
     </div>

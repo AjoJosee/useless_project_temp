@@ -13,6 +13,20 @@ import { GraveyardStatsModal } from './../components/GraveyardStatsModal';
 import { Footer } from './../components/Footer';
 import { JumpscareOverlay } from './../components/JumpscareOverlay';
 
+import { motion } from 'framer-motion';
+import { Ghost } from 'lucide-react';
+import { sound } from './../lib/audio';
+
+const TRANSITION_GHOSTS = [
+  { id: 1, left: 12, driftX: 45, duration: 4.2, delay: 0.1, size: 36 },
+  { id: 2, left: 28, driftX: -30, duration: 5.0, delay: 0.4, size: 48 },
+  { id: 3, left: 42, driftX: 60, duration: 4.6, delay: 0.2, size: 40 },
+  { id: 4, left: 58, driftX: -40, duration: 4.8, delay: 0.5, size: 52 },
+  { id: 5, left: 72, driftX: 35, duration: 5.2, delay: 0.3, size: 38 },
+  { id: 6, left: 85, driftX: -50, duration: 4.4, delay: 0.6, size: 44 },
+  { id: 7, left: 93, driftX: 20, duration: 5.5, delay: 0.7, size: 32 },
+];
+
 function MainGraveyardApp() {
   const [graves, setGraves] = useState<Grave[]>([]);
   const [activeSection, setActiveSection] = useState<'morgue' | 'graveyard'>('morgue');
@@ -20,6 +34,11 @@ function MainGraveyardApp() {
   const [activeCommentsGrave, setActiveCommentsGrave] = useState<Grave | null>(null);
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  // --- Scroll Atmosphere Transition ---
+  const [isScreenFlickering, setIsScreenFlickering] = useState(false);
+  const [showTransitionGhosts, setShowTransitionGhosts] = useState(false);
+  const hasTransitionTriggeredRef = useRef(false);
 
   // --- Jumpscare state ---
   const [jumpscareActive, setJumpscareActive] = useState(false);
@@ -35,6 +54,35 @@ function MainGraveyardApp() {
   const morgueRef = useRef<HTMLDivElement | null>(null);
   const graveyardRef = useRef<HTMLDivElement | null>(null);
   const searchParams = useSearchParams();
+
+  // Scroll-triggered atmosphere transition when moving into graveyard
+  useEffect(() => {
+    const target = graveyardRef.current;
+    if (!target) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry && entry.isIntersecting && !hasTransitionTriggeredRef.current) {
+          hasTransitionTriggeredRef.current = true;
+          // Trigger screen flicker
+          setIsScreenFlickering(true);
+          setTimeout(() => setIsScreenFlickering(false), 500);
+
+          // Start eerie ambient wind loop
+          sound.startAmbientWind();
+
+          // Spawn drifting ghost shapes
+          setShowTransitionGhosts(true);
+          setTimeout(() => setShowTransitionGhosts(false), 6500);
+        }
+      },
+      { threshold: 0.15 }
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, []);
 
   // Load graves
   const reloadGraves = async () => {
@@ -140,6 +188,40 @@ function MainGraveyardApp() {
       {/* Fake jumpscare overlay — z-9999, above everything */}
       <JumpscareOverlay active={jumpscareActive} onDone={handleJumpscareDone} />
 
+      {/* Screen flicker effect on transition */}
+      {isScreenFlickering && (
+        <div className="pointer-events-none fixed inset-0 z-40 animate-screen-flicker" />
+      )}
+
+      {/* 5-8 Drifting Ghost Shapes on Atmosphere Transition */}
+      {showTransitionGhosts && (
+        <div className="pointer-events-none fixed inset-0 z-30 overflow-hidden">
+          {TRANSITION_GHOSTS.map((g) => (
+            <motion.div
+              key={g.id}
+              initial={{ opacity: 0, y: '100vh', x: 0 }}
+              animate={{
+                opacity: [0, 0.45, 0.65, 0.35, 0],
+                y: '-20vh',
+                x: g.driftX,
+              }}
+              transition={{
+                duration: g.duration,
+                delay: g.delay,
+                ease: 'easeOut',
+              }}
+              className="absolute"
+              style={{ left: `${g.left}%` }}
+            >
+              <Ghost
+                style={{ width: `${g.size}px`, height: `${g.size}px` }}
+                className="text-emerald-300/40 drop-shadow-[0_0_18px_rgba(52,211,153,0.4)]"
+              />
+            </motion.div>
+          ))}
+        </div>
+      )}
+
       {/* Navigation Header */}
       <Header
         activeSection={activeSection}
@@ -150,7 +232,7 @@ function MainGraveyardApp() {
 
       {/* Main Content Area */}
       <main className="flex-1 pb-16">
-        {/* Act 1 — The Morgue (Coroner's Intake Desk) */}
+        {/* Act 1 — The Morgue (Bury a Ghosted Text) */}
         <div ref={morgueRef} className="pt-4 sm:pt-6">
           <MorgueIntake
             onBuryComplete={handleBuryComplete}
@@ -158,24 +240,23 @@ function MainGraveyardApp() {
           />
         </div>
 
-        {/* Separator Fog / Terrain Divide */}
+        {/* Separator / Terrain Divide */}
         <div className="my-12 relative flex items-center justify-center">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-zinc-800/80"></div>
           </div>
-          <div className="relative flex items-center space-x-3 bg-[#090a0f] px-6 text-zinc-500 font-mono text-xs">
+          <div className="relative flex items-center space-x-3 bg-[#090a0f] px-6 text-zinc-500 font-mono text-xs uppercase tracking-widest">
             <span>🪦</span>
-            <span>LEAVING THE CORONER&apos;S CLINIC &middot; ENTERING UNHALLOWED GROUNDS</span>
+            <span>Resting Grounds</span>
             <span>🪦</span>
           </div>
         </div>
 
-        {/* Act 2 — The Graveyard (Communal Feed & Trench / Hill Zones) */}
+        {/* Act 2 — The Graveyard */}
         <div ref={graveyardRef}>
           <GraveyardFeed
             graves={graves}
             onOpenOuija={handleOpenOuija}
-            onOpenComments={(grave) => setActiveCommentsGrave(grave)}
             onReactionUpdate={reloadGraves}
             onScrollToIntake={() => handleNavigate('morgue')}
           />

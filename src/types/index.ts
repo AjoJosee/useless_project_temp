@@ -35,6 +35,7 @@ export interface Grave {
   epitaph: string;
   is_haunted: boolean;
   created_at: string;
+  ghosted_by?: string;
   reactions?: {
     incense: number;
     pour_one_out: number;

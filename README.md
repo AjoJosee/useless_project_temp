@@ -1,113 +1,97 @@
-# ⚰️ REST IN READ — Digital Morgue for Dead Texts
 
-> A satirical digital morgue where users file coroner's reports for ignored text messages, browse a communal graveyard of other people's dead conversations, and occasionally get flirted with by needy ghosts via a Ouija board.
->
-> **Tone:** Dark comedy, gallows humor, genuinely funny — never mean-spirited toward the user.
+# Rest in Read 🪦
 
----
+## Basic Details
+### Team Name: Tinkerers
 
-## 🌟 Key Features
+### Team Members
+- Team Lead: Ajo Jose - College of Engineering Trivandrum (CET)
+- Member 2: Deepa Mary Jose - College of Engineering Trivandrum (CET)
 
-### Act 1 — The Morgue (Coroner's Intake & Burial Ritual)
-- **Form CR-404 Styled Coroner's Intake Desk**:
-  - **"The Victim"**: Verbatim paste of the deceased text message with real-time character counting and automatic cemetery zone classification.
-  - **"Time of Death"**: Slider tracking hours/days since read with clinical stages (Fresh kill, Rigor mortis, Decomp, Fossilized).
-  - **"Suspected Cause of Death"**:
-    - 🗡️ *The One-Word Assassin* ("K", "cool", "nice" — bludgeoned with minimal syllables)
-    - 👻 *The Ghosting* (Vanished without a trace, delivered but never replied)
-    - 💔 *The Reaction-Only Fatality* (Hearted or thumbed-up conversational DNR order)
-    - 🔀 *The Topic Pivot* (Emotional vulnerability countered by an unprompted TikTok)
-- **Burial Sequence**:
-  - Screen dims to 70% black (400ms transition)
-  - Procedural Web Audio shovel-dig sound effect
-  - Canvas dust & soil particles cascading down the screen
-  - **Kübler-Ross Grief-Stage Loading Sequence (P2 Stretch)**: Interactive 5-stage progression (Denial → Anger → Bargaining → Depression → Acceptance) with satirical quips.
-  - LLM generates a darkly comedic one-line tombstone epitaph (max 15 words).
-- **Official Death Certificate**:
-  - Styled as an authentic aged coroner's parchment document.
-  - Rotated red **"DECLARATION OF CLOSURE"** stamp with authentic mechanical slam sound effect and slight jitter animation.
-  - One-click **Download Certificate (PNG export)** via `html-to-image`.
-  - Direct permalinks and burial routing to Act 2.
+### Project Description
+A digital graveyard for texts that got left on read. Bury your ghosted messages, get a death certificate for closure, mourn with others who lie next to you, and — if you're truly unwell — summon the ghost of the conversation on an interactive Ouija board.
 
-### Act 2 — The Graveyard (Communal Necropolis Feed)
-- **Two Visually Distinct Terrain Zones** separated dynamically by message length:
-  - ⛰️ **Hill of Left-on-Read Memes** (`≤ 200` chars): Casual texts, short reels, meme replies.
-  - 🕳️ **Trench of Tragic Paragraphs** (`> 200` chars): Vulnerable essays, confessions, and novels.
-- **Tombstone Cards**:
-  - Cause-of-death badges and stone-carved epitaph typography.
-  - Relative burial age (*"3 days in the ground"*).
-  - Expandable *"Exhume Text"* drawer with full autopsy excerpt.
-- **Interactive Grave Offerings**:
-  - 🕯️ **Burn Incense**: Looping smoke-trail CSS animations rising from the stone; client-side expiry logic filters out incense older than 24 hours.
-  - 🍺 **Pour One Out**: Liquid splash animation across the stone with procedural splashing sound.
-  - 🎖️ **Fallen Soldier Badge**: Salute ribbon awarded to texts displaying extraordinary conversational courage.
-  - Device-local session rate limiting (one reaction type per grave per session).
-- **Exhumation & Eulogies (P2 Stretch)**:
-  - Comment thread drawer where fellow mourners leave advice and closure eulogies.
+### The Problem (that doesn't exist)
+Nobody has built a proper funeral service for the text message that got "seen" and never replied to. Millions of unresolved "hey"s are out there, unburied, haunting people's chat threads with zero closure.
 
-### Act 3 — Paranormal Rizz (Ouija Board Side-Quest)
-- **Haunted Graves**: ~15% of graves (or configurable) emanate an eerie spectral pulse glow.
-- **Fullscreen Antique Ouija Board Modal**:
-  - Custom wood-grained Ouija board graphic with letter arcs, numbers, YES, NO, and GOODBYE.
-  - Sliding wooden **Planchette** with viewing lens sight glass.
-  - Dragging letter-to-letter animation spelling out ghost dialogue with wooden scraping audio.
-  - **Anthropic Claude AI Ghost Dialogue**: Needy, dramatic, aggressively flirty dialogue packed with texting & mortality puns.
-  - **Escalation Double-Texts**: If the modal is idle for ~20s without interaction, the ghost sends unprompted double-texts (*"Hello??"*, *"did u seriously just ghost a ghost?!"*).
-  - Interactive visitor input to converse with the spirit.
+### The Solution (that nobody asked for)
+A morgue intake form where you confess your ghosted text, a burial ritual that generates an official "Declaration of Closure" certificate, a communal graveyard of everyone else's tragic texts to mourn together, and a flirty, attention-starved AI ghost you can summon via Ouija board to ask it "why."
 
----
+# View our site here: [https://leftonseen.netlify.app/]
 
-## 🛠️ Tech Stack
+## Technical Details
+### Technologies/Components Used
+For Software:
+- TypeScript, JavaScript
+- Next.js 14, React 18
+- Tailwind CSS, Framer Motion
+- Anthropic Claude API (ghost dialogue persona), with a local rule-based fallback when no API key is present
+- Web Audio API (all sound effects are synthesized in-browser, zero audio files)
+- Supabase (optional shared/communal graveyard — the app runs fully on localStorage without it)
+- Netlify (deployment)
 
-- **Framework**: Next.js 16 (App Router) + React 19 + TypeScript
-- **Styling**: Tailwind CSS v4 + Gothic Google Fonts (`Cinzel Decorative`, `Cinzel`, `Cormorant Garamond`, `Special Elite`, `Creepster`)
-- **Animations**: Framer Motion + HTML5 Canvas Particles + Custom CSS Keyframes
-- **Audio**: Web Audio API Sound Engine (zero external audio asset dependencies; 100% offline-resilient synthesized sounds: Shovel dig, Planchette scrape, Pour splash, Red stamp thud, Bell toll, Ambient wind loop)
-- **Certificate Export**: `html-to-image`
-- **Database**: Supabase (Postgres & Realtime) with automatic graceful fallback to LocalStorage
-- **AI Intelligence**: Anthropic Claude API (`@anthropic-ai/sdk`) with rich contextual dark-comedy fallback generators
+### Implementation
+For Software:
 
----
-
-## 🚀 Getting Started
-
-### 1. Install Dependencies
+# Installation
 ```bash
+git clone https://github.com/AjoJosee/useless_project_temp.git
+cd useless_project_temp
 npm install
+cp .env.example .env.local   # optional: add ANTHROPIC_API_KEY and Supabase keys for live ghost dialogue + shared graveyard
 ```
 
-### 2. Configure Environment Variables (Optional)
-Copy `.env.example` to `.env.local`:
-```bash
-cp .env.example .env.local
-```
-Fill in your credentials:
-```env
-ANTHROPIC_API_KEY=sk-ant-...
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-```
-*(Note: If left blank, the app runs 100% in local mode with smart built-in epitaph/ghost generators and local storage!)*
-
-### 3. Supabase Database Setup (Optional)
-If using Supabase, copy the contents of `supabase/schema.sql` and run it in the **Supabase SQL Editor**.
-
-### 4. Run Development Server
+# Run
 ```bash
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Then open http://localhost:3000
+
+### Project Documentation
+For Software:
+
+# Screenshots (Add at least 3)
+![Intake Desk](Add screenshot of the morgue intake form here)
+*Submitting a ghosted text with cause of death and time-of-death slider*
+
+![Graveyard Feed](Add screenshot of the communal graveyard here)
+*Browsing everyone's buried texts as tombstones*
+
+![Ouija Board](Add screenshot of the Ouija board modal here)
+*Summoning the ghost of a dead conversation*
+
+# Diagrams
+```mermaid
+flowchart LR
+    A[Paste ghosted text + cause of death] --> B[Burial ritual animation]
+    B --> C[Death Certificate generated]
+    C --> D[Public Graveyard Feed]
+    D -->|click a haunted grave| E[Ouija Board]
+    E -->|LLM call with grave context| F[Ghost replies in character]
+```
+*How a ghosted text moves from confession to closure to communal mourning to (optionally) paranormal flirting*
+
+### Project Demo
+# Video
+[Add your demo video link here]
+*Walkthrough of burying a text, browsing the graveyard, and summoning a ghost on the Ouija board*
+
+# Additional Demos
+[Add link to your pitch reel here, if separate from the demo video]
+
+## Team Contributions
+- Ajo Jose: Core app build — Next.js structure, Supabase/local storage layer, LLM-powered ghost dialogue integration
+- Deepa Mary Jose: UX simplification, copy writing, VFX/SFX design, Ouija board correlation fixes, documentation
+
+## AI Tools Disclosure
+Per hackathon rules (section 3.2), AI tools were used and are disclosed here:
+- **Claude** (via an agentic coding IDE) was used throughout development for implementation guidance, debugging, and code changes to the features described above.
+- **Google Gemini** was used for a portion of development when Claude usage limits were reached mid-hackathon.
+- **Anthropic's Claude API** is also a runtime dependency of the shipped product itself (not just a dev tool) — it powers the in-app Ouija ghost's contextual dialogue.
+All AI-assisted changes were reviewed and tested by the team before being committed.
 
 ---
+Made with ❤️ at TinkerHub Useless Projects
 
-## 📜 Deployment
-
-Deploy seamlessly to [Vercel](https://vercel.com):
-```bash
-npm run build
-```
-Add your `ANTHROPIC_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, and `NEXT_PUBLIC_SUPABASE_ANON_KEY` to Vercel Environment Variables.
-
-
-
-just a duplicate worksapce w deepa for useless projects 
+![Static Badge](https://img.shields.io/badge/TinkerHub-24?color=%23000000&link=https%3A%2F%2Fwww.tinkerhub.org%2F)
+![Static Badge](https://img.shields.io/badge/UselessProjects--26-26?link=https%3A%2F%2Ftinkerhub.org%2Fevents%2F1M8ORET9A1%2Fuseless-projects-3.0)

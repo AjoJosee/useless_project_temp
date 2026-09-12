@@ -52,13 +52,13 @@ For Software:
 
 # Screenshots
 
-![Intake Desk]<img width="1326" height="834" alt="Screenshot 2026-09-12 at 9 03 58 PM" src="https://github.com/user-attachments/assets/58c1dff3-39c5-4f06-b9f3-89a0bd5a43e7" />
+<img width="1326" height="834" alt="Screenshot 2026-09-12 at 9 03 58 PM" src="https://github.com/user-attachments/assets/58c1dff3-39c5-4f06-b9f3-89a0bd5a43e7" />
 *Submitting a ghosted text with cause of death and time-of-death*
 
-![Graveyard Feed]<img width="1362" height="830" alt="Screenshot 2026-09-12 at 9 05 35 PM" src="https://github.com/user-attachments/assets/fcdd7e9f-ecc4-42fd-99bc-2104b92f2fa5" />
+<img width="1362" height="830" alt="Screenshot 2026-09-12 at 9 05 35 PM" src="https://github.com/user-attachments/assets/fcdd7e9f-ecc4-42fd-99bc-2104b92f2fa5" />
 *Browsing everyone's buried texts as tombstones*
 
-![Ouija Board]<img width="1179" height="824" alt="Screenshot 2026-09-12 at 9 06 46 PM" src="https://github.com/user-attachments/assets/5019d9ff-edda-4c74-b995-1b7f1ae344c3" />
+<img width="1179" height="824" alt="Screenshot 2026-09-12 at 9 06 46 PM" src="https://github.com/user-attachments/assets/5019d9ff-edda-4c74-b995-1b7f1ae344c3" />
 *Summoning the ghost of a dead conversation*
 
 # Diagrams

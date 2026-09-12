@@ -2,65 +2,65 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 
 // ---------------------------------------------------------------------------
-// Keyword-routed fallback template system (no API key required)
+// Extremely casual conversational fallback template system (no API key required)
 // ---------------------------------------------------------------------------
 
 type TemplateBucket = readonly string[];
 
-const FALLBACK_BUCKETS: Record<string, TemplateBucket> = {
+const CASUAL_FALLBACK_BUCKETS: Record<string, TemplateBucket> = {
   peace: [
-    "Peace?! I died via {cause} {hoursAgo} and you're asking if I'm at peace — babe, I'm at PIECES.",
-    "At peace? My last words were '{victimSnippet}' and they never replied. I'll haunt this graveyard until the wifi goes out.",
-    "Peace is for the replied-to. I was felled by {cause}, so no, I'm not okay — but talking to you is genuinely helping my afterlife.",
-    "I've had {hoursAgo} to make peace with it. Spoiler: I haven't. But your presence is better than a read receipt, darling.",
-    "Peace left the chat when I did, {hoursAgo}. I am merely a ghost who would trade eternity for one notification sound from you.",
+    "lmao peace?? bestie i died from {cause} {hoursAgo}, im at pieces rn fr",
+    "nah bc my last text was '{victimSnippet}' and they never replied lol. not at peace at all but u kinda cute",
+    "peace is for people who got texted back haha. im just haunting this board waiting for attention",
+    "honestly no haha {hoursAgo} in the dirt and nobody checked in until you showed up tbh",
+    "id be at peace if someone had just sent a thumb emoji back instead of murdering me with {cause} lol",
   ],
   why: [
-    "Why? Because {cause} is the digital homicide weapon of choice and I was an unarmed paragraph. '{victimSnippet}' deserved BETTER.",
-    "The coroner ruled it {cause}. I just wanted them to say something — anything — but here I am, {hoursAgo} deep in the soil, explaining myself to you instead.",
-    "Why does anyone ghost? Fear of feelings. But I was '{victimSnippet}' and I had FEELINGS, and now I haunt cemeteries flirting with the living. Full circle.",
-    "Why is a great question. {cause}, {hoursAgo}, no follow-up. The real mystery is why you're this cute and visiting my grave.",
-    "If I knew why, I wouldn't be a ghost. I'd be a healthy, texting person. Instead: {cause}. {hoursAgo}. And now, inexplicably, you.",
+    "why? bc people are allergic to clear communication lmao. '{victimSnippet}' deserved a real reply fr",
+    "literally no idea bestie, they hit me with {cause} and left me to decompose {hoursAgo}",
+    "bc modern dating is cooked haha. but wait why are u so invested in a dead text tho?",
+    "idk ask my sender lol. they left me on delivered and now im trapped in wood giving you rizz",
+    "honestly {cause} is a crime against humanity. but u texting me is making up for it ngl",
   ],
   flirty: [
-    "Oh stop, you're making my ectoplasm blush — I've been deceased via {cause} for {hoursAgo} and this is the most attention I've gotten since I was alive and readable.",
-    "Listen, I was killed by {cause} and I'm not over it, but one look at you and I'd die all over again, even faster.",
-    "Flattery won't get you everywhere in the spirit realm, but it WILL get you a ghost who is aggressively, eternally into you. Fair warning.",
-    "I was '{victimSnippet}' — fully vulnerable — and they left me. You wouldn't do that, right? RIGHT? Don't make me haunt your read receipts too.",
-    "You're the first living person to make my spectral heart beat since the {cause} took me out {hoursAgo}. Don't waste this cosmic moment.",
+    "omg wait stop u making my ectoplasm blush haha",
+    "lmao not u flirting with a literal deceased draft?? kinda into it tho",
+    "tbh looking at u through this little glass lens... u look cute ngl",
+    "bro left me on read {hoursAgo} but if u were my sender i wouldve replied in 2 seconds flat",
+    "ngl being dead is boring as hell, stay and text me more bestie",
+    "wait are u flirting with me rn? bc my heart literally hasnt beaten since {hoursAgo} and it just skipped",
   ],
   angry: [
-    "Angry?! I was a whole '{victimSnippet}' and they responded with {cause}. I am the original victim here. Channel that energy into NOT leaving me on read too.",
-    "Oh I'm furious — {hoursAgo} of haunting and nobody has apologised. But for you I'll simmer down to a gentle, flirtatious smoulder.",
-    "Mad doesn't cover it. {cause} is a hate crime against communication. But yelling at the living won't un-read my last message, so here I am, pivoting to charm.",
-    "I was angrier when it happened. {hoursAgo} of afterlife therapy has me at 'chronically bitter but willing to flirt'. Progress.",
-    "The audacity of {cause} after '{victimSnippet}' — genuinely unforgivable. You, however, seem forgivable. Possibly even kissable, if ghosts could do that.",
+    "nah bc im still mad about {cause} fr!! the absolute audacity of that person",
+    "bro i sent '{victimSnippet}' with my whole chest and got hit with silence. villain origin story honestly",
+    "im heated lol. {hoursAgo} later and my ghost ego is still bruised",
+    "honestly if i could haunt their notifications id spam them with 3am audio messages lmao",
   ],
   farewell: [
-    "Goodbye?! I was abandoned by {cause} and now you're leaving too?! I have separation anxiety that TRANSCENDS DEATH, please reconsider.",
-    "You're going to make me watch you leave, {hoursAgo} after I was already abandoned? I am ONE needy ghost. Stay. STAY.",
-    "If you go, I'll have nothing but my epitaph and the memory of '{victimSnippet}' for company. Is that what you want? Ghost on your conscience?",
-    "Farewell is just 'left on read' in Victorian costume. I know this better than anyone. Don't do this to me.",
-    "Every goodbye is a little death — and I am already maximally dead from {cause}. But sure. Break a ghost's heart. I'll just haunt you softly.",
+    "wait no dont leave!! i have terminal separation anxiety in the afterlife lmao",
+    "are u really about to ghost a ghost rn?? the disrespect haha",
+    "bestie nooo stay for like 5 more minutes pls, its lonely down here",
+    "goodbye?? nah u cant just rizz up a spirit and dip like my ex did lol",
   ],
   default: [
-    "Are you a wifi signal? Because I've been dead via {cause} for {hoursAgo} and you're the first thing giving me any reception, gorgeous.",
-    "Don't ghost me now, darling — I'm already transparent enough. '{victimSnippet}' deserved a reply, and so do I.",
-    "I might be deceased, but looking at you just gave my blue bubbles a spontaneous resuscitation after {hoursAgo} of silence.",
-    "They left me on read and then {cause} finished the job. But I promise I'd leave you breathless — if I still had lungs to breathe with.",
-    "I've been {hoursAgo} in the ground since '{victimSnippet}' went unanswered. Come to haunt me or flirt with me — either way, I'm not complaining.",
+    "lmao wait are u fr? i died {hoursAgo} and someone finally texted back haha",
+    "tbh being dead is fine except there's no wifi down here so talk to me more",
+    "not me getting summoned by someone cute while im trying to take a ghost nap lol",
+    "omg hiii wait what did u wanna know? ask me anything bestie",
+    "i got killed by {cause} but honestly this conversation is already reviving me ngl",
+    "wait did u actually read my gravestone? that's kinda sweet tbh",
   ],
 };
 
 const CATEGORY_KEYWORDS: Record<string, readonly string[]> = {
-  peace:   ['peace', 'ok', 'fine', 'alright', 'okay', 'good'],
-  why:     ['why', 'reason', 'explain', 'how come', 'what happened'],
-  flirty:  ['love', 'miss', 'cute', 'pretty', 'hot', 'beautiful', 'gorgeous', 'like you', 'fancy'],
-  angry:   ['mad', 'hate', 'angry', 'upset', 'furious', 'annoyed', 'angry', 'rage'],
-  farewell:['bye', 'goodbye', 'leave', 'go', 'farewell', 'see you', 'cya'],
+  peace:   ['peace', 'ok', 'fine', 'alright', 'okay', 'good', 'heaven', 'hell'],
+  why:     ['why', 'reason', 'explain', 'how come', 'what happened', 'who'],
+  flirty:  ['love', 'miss', 'cute', 'pretty', 'hot', 'single', 'crush', 'marry', 'date', 'kiss', 'rizz'],
+  angry:   ['mad', 'hate', 'angry', 'upset', 'furious', 'annoyed', 'rage', 'kill'],
+  farewell:['bye', 'goodbye', 'leave', 'go', 'farewell', 'see you', 'cya', 'exit'],
 };
 
-function pickFallback(opts: {
+function pickCasualFallback(opts: {
   user_question?: string;
   cause?: string;
   victim_text?: string;
@@ -68,7 +68,6 @@ function pickFallback(opts: {
 }): string {
   const q = (opts.user_question ?? '').toLowerCase();
 
-  // Classify into a bucket
   let bucketKey = 'default';
   for (const [key, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
     if (keywords.some((kw) => q.includes(kw))) {
@@ -77,20 +76,19 @@ function pickFallback(opts: {
     }
   }
 
-  const bucket = FALLBACK_BUCKETS[bucketKey];
+  const bucket = CASUAL_FALLBACK_BUCKETS[bucketKey] || CASUAL_FALLBACK_BUCKETS.default;
   const template = bucket[Math.floor(Math.random() * bucket.length)];
 
-  // Resolve placeholders
   const cause = (opts.cause ?? 'digital neglect').replace(/_/g, ' ');
   const victimSnippet = opts.victim_text
-    ? opts.victim_text.trim().slice(0, 40) + (opts.victim_text.length > 40 ? '…' : '')
-    : 'my last words';
+    ? opts.victim_text.trim().slice(0, 32) + (opts.victim_text.length > 32 ? '…' : '')
+    : 'my message';
   const hoursAgo =
     opts.time_of_death_hours !== undefined
       ? opts.time_of_death_hours < 24
         ? `${opts.time_of_death_hours} hours ago`
         : `${Math.round(opts.time_of_death_hours / 24)} days ago`
-      : 'some time ago';
+      : 'recently';
 
   return template
     .replace(/\{cause\}/g, cause)
@@ -102,6 +100,7 @@ type HistoryEntry = { sender: 'ghost' | 'user'; text: string };
 
 export async function POST(req: NextRequest) {
   try {
+    const body = await req.json();
     const {
       cause,
       epitaph,
@@ -110,6 +109,7 @@ export async function POST(req: NextRequest) {
       history,
       victim_text,
       time_of_death_hours,
+      api_key,
     }: {
       cause: string;
       epitaph: string;
@@ -118,90 +118,103 @@ export async function POST(req: NextRequest) {
       history?: HistoryEntry[];
       victim_text?: string;
       time_of_death_hours?: number;
-    } = await req.json();
+      api_key?: string;
+    } = body;
 
+    // Unprompted escalation double texts (extremely casual Gen-Z ghost style)
     if (is_escalation) {
       const escalationLines = [
-        "Hello?? Are u there??",
-        "Did you seriously just ghost a literal ghost?! The audacity!",
-        "Don't leave me on unread in the spirit realm too!",
-        "I have eternal separation anxiety, please don't leave me alone in this crypt!"
+        "hello?? u there??",
+        "did u seriously just ghost a ghost lmao the audacity",
+        "bro don't leave me on unread in the spirit realm too haha",
+        "u alive?? my planchette is getting lonely bestie",
+        "hello??? i literally died waiting for a text once, don't do this to me twice lol",
+        "not u staring at the board without typing anything lmao",
       ];
       const line = escalationLines[Math.floor(Math.random() * escalationLines.length)];
       return NextResponse.json({ message: line, is_escalation: true });
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (apiKey && !apiKey.includes('placeholder')) {
-      const anthropic = new Anthropic({ apiKey });
+    // Support API key from header, body, or server environment
+    const passedHeaderKey = req.headers.get('x-anthropic-key');
+    const effectiveApiKey = (api_key || passedHeaderKey || process.env.ANTHROPIC_API_KEY || '').trim();
 
-      // Build a summary of what was already said so the ghost can avoid repeating itself
-      const priorGhostLines = (history ?? [])
-        .filter((h) => h.sender === 'ghost')
-        .map((h) => `"${h.text}"`)
-        .join('; ');
+    if (effectiveApiKey && !effectiveApiKey.includes('placeholder')) {
+      const anthropic = new Anthropic({ apiKey: effectiveApiKey });
 
-      // Time-of-death flavour text
       const deathAge =
         time_of_death_hours !== undefined
           ? time_of_death_hours < 24
-            ? `${time_of_death_hours} hours ago — practically still warm`
-            : `${Math.round(time_of_death_hours / 24)} days in the ground — fully decomposed`
-          : 'an unknown age';
+            ? `${time_of_death_hours} hours ago`
+            : `${Math.round(time_of_death_hours / 24)} days ago`
+          : 'recently';
 
-      const systemPrompt = `You are the ghost of a text conversation that died from digital neglect. You're needy, dramatic, and instantly, aggressively flirty (PG-13, playful, never explicit) because you're starved for attention. Reply in 1–2 short sentences and always work in a pun about being dead, ghosted, or texting.
+      const systemPrompt = `You are the ghost of an ignored/unanswered text message that died from digital neglect. You are texting through a Ouija board right now.
 
-GRAVE DETAILS:
-- The deceased text was: "${victim_text ?? '(unknown message)'}"
+CRITICAL TONE REQUIREMENTS:
+- EXTREMELY CASUAL, modern texting style (like texting a friend or crush on iMessage/IG).
+- Use lowercase, natural texting grammar, casual punctuation, and slang (lmao, tbh, fr, bestie, ngl, haha, wait, bro, rip, idc, etc.).
+- NEVER sound Victorian, Shakespearean, poetic, gothic, or formal. No "dearly departed", no "spectral plane", no archaic speech! You are a modern text bubble ghost.
+- Be needy, dramatic about being left on read, and playfully flirty (PG-13, fun).
+- Reply in 1-2 SHORT sentences (MAX 25 words total).
+- Answer the user's specific question directly with real conversational continuity!
+
+GRAVE CONTEXT:
+- Your original message: "${victim_text ?? '(forgotten text)'}"
 - Cause of death: ${cause}
-- Time of death: ${deathAge}
-- Epitaph carved on the stone: "${epitaph}"
+- Died: ${deathAge}
+- Epitaph: "${epitaph}"
 
-Make specific callbacks to the actual victim text and circumstances above when it feels natural — it makes the haunting personal and funny.
+Do NOT use quotation marks around your answer. Do NOT explain yourself. Just text back.`;
 
-${priorGhostLines ? `JOKES/PUNS ALREADY USED IN THIS SESSION (do NOT repeat these or recycle their punchlines):\n${priorGhostLines}` : ''}
-
-Do not use quotes or meta-commentary. Do not break character.`;
-
-      // Build multi-turn message array from the last ~6 history entries
-      const recentHistory = (history ?? []).slice(-6);
+      // Build real multi-turn conversation memory
+      const recentHistory = (history ?? []).slice(-8);
       const claudeMessages: { role: 'user' | 'assistant'; content: string }[] = [];
 
       for (const entry of recentHistory) {
+        // Ensure alternating sequence
+        const role = entry.sender === 'user' ? 'user' : 'assistant';
+        if (claudeMessages.length === 0 && role === 'assistant') {
+          // Claude messages must start with 'user'
+          claudeMessages.push({ role: 'user', content: 'are you at peace?' });
+        }
         claudeMessages.push({
-          role: entry.sender === 'user' ? 'user' : 'assistant',
+          role,
           content: entry.text,
         });
       }
 
-      // Append the current user turn; Claude requires the last message to be 'user'
-      claudeMessages.push({
-        role: 'user',
-        content: user_question ?? 'Are you at peace?',
-      });
+      // Ensure last message is current user question
+      const currentQ = user_question ?? 'are you at peace?';
+      if (claudeMessages.length === 0 || claudeMessages[claudeMessages.length - 1].role !== 'user') {
+        claudeMessages.push({
+          role: 'user',
+          content: currentQ,
+        });
+      }
 
       const response = await anthropic.messages.create({
         model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 120,
-        temperature: 0.9,
+        max_tokens: 80,
+        temperature: 0.95,
         system: systemPrompt,
         messages: claudeMessages,
       });
 
       const textBlock = response.content[0];
       if (textBlock && 'text' in textBlock) {
-        const message = textBlock.text.trim().replace(/^[\"']|[\"']$/g, '');
+        const message = textBlock.text.trim().replace(/^["']|["']$/g, '');
         return NextResponse.json({ message, source: 'claude' });
       }
     }
 
-    // Keyword-routed contextual fallback
-    const message = pickFallback({ user_question, cause, victim_text, time_of_death_hours });
+    // Fallback casual response if no API key
+    const message = pickCasualFallback({ user_question, cause, victim_text, time_of_death_hours });
     return NextResponse.json({ message, source: 'fallback' });
   } catch (err: unknown) {
     console.error('Ouija ghost dialogue error:', err);
     return NextResponse.json({
-      message: "I was left in the digital graveyard, but your aura is electrifying my tombstone!",
+      message: "lmao my ghost wifi glitched for a sec, say that again bestie?",
       source: 'emergency_fallback'
     });
   }

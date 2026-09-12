@@ -315,7 +315,48 @@ class SoundEngine {
 
   // Jumpscare Sting: sharp broadband noise burst + fast pitch-drop oscillator
   // Visual overlay always fires; this method is only called when not muted.
-  public playJumpscareSting() {
+  // Eerie digital glitch stutter
+  public playEerieGlitch() {
+    if (this.isMuted) return;
+    const ctx = this.initCtx();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    for (let i = 0; i < 4; i++) {
+      const osc = ctx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(300 + Math.random() * 900, t + i * 0.04);
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.2, t + i * 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.04 + 0.035);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t + i * 0.04);
+      osc.stop(t + i * 0.04 + 0.04);
+    }
+  }
+
+  // Muffled bass heartbeat
+  public playHeartbeat() {
+    if (this.isMuted) return;
+    const ctx = this.initCtx();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    [0, 0.18].forEach(offset => {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(65, t + offset);
+      osc.frequency.exponentialRampToValueAtTime(35, t + offset + 0.12);
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.4, t + offset);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + offset + 0.15);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t + offset);
+      osc.stop(t + offset + 0.16);
+    });
+  }
+
+  playJumpscareSting() {
     if (this.isMuted) return;
     const ctx = this.initCtx();
     if (!ctx) return;

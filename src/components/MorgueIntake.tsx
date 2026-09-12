@@ -229,7 +229,7 @@ export const MorgueIntake: React.FC<MorgueIntakeProps> = ({
                     }`}
                   >
                     <div className="flex items-center space-x-2.5">
-                      <span className="text-2xl">{cause.icon}</span>
+                      {(() => { const CauseIcon = cause.icon; return <CauseIcon className="h-5 w-5 flex-shrink-0" />; })()}
                       <div>
                         <h4 className={`text-sm font-bold ${isSelected ? 'text-red-300' : 'text-zinc-200'}`}>
                           {cause.name}

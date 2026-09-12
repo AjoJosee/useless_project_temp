@@ -28,6 +28,9 @@ export async function askOuijaGhost(params: {
   epitaph: string;
   user_question?: string;
   is_escalation?: boolean;
+  history?: { sender: 'ghost' | 'user'; text: string }[];
+  victim_text?: string;
+  time_of_death_hours?: number;
 }): Promise<string> {
   try {
     const res = await fetch('/api/ouija', {

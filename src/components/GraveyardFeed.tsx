@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Grave, CauseOfDeath } from '../types';
 import { TombstoneCard } from './TombstoneCard';
 import { Compass, Ghost, Search, Filter, Mountain, Layers, Flame, ArrowUp } from 'lucide-react';
+import { AmbientFog } from './AmbientFog';
 
 interface GraveyardFeedProps {
   graves: Grave[];
@@ -44,7 +45,9 @@ export const GraveyardFeed: React.FC<GraveyardFeedProps> = ({
   const totalHaunted = graves.filter((g) => g.is_haunted).length;
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+    <section className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6">
+      {/* Continuous ambient fog drifting behind the graveyard feed (z-0) */}
+      <AmbientFog />
       {/* Cemetery Entrance Arch */}
       <div className="text-center mb-8">
         <div className="inline-flex items-center space-x-2 rounded-full border border-zinc-800 bg-zinc-900/60 px-4 py-1.5 text-xs font-mono text-zinc-400">

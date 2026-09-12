@@ -1,3 +1,4 @@
+import { Sword, Ghost, HeartCrack, Shuffle } from 'lucide-react';
 import { CauseOfDeath, CauseOfDeathInfo, KublerRossStage, Grave } from '../types';
 
 export const CAUSES_OF_DEATH: Record<CauseOfDeath, CauseOfDeathInfo> = {
@@ -5,7 +6,7 @@ export const CAUSES_OF_DEATH: Record<CauseOfDeath, CauseOfDeathInfo> = {
     id: 'one_word_assassin',
     name: 'The One-Word Assassin',
     flavor: 'Bludgeoned to death by a single syllable: "K", "cool", or "nice"',
-    icon: '🗡️',
+    icon: Sword,
     tagline: 'Terminated with extreme brevity',
     color: 'border-red-800 text-red-400 bg-red-950/40'
   },
@@ -13,7 +14,7 @@ export const CAUSES_OF_DEATH: Record<CauseOfDeath, CauseOfDeathInfo> = {
     id: 'ghosting',
     name: 'The Ghosting',
     flavor: 'Vanished without a trace into the digital ether. Delivered, but never avenged',
-    icon: '👻',
+    icon: Ghost,
     tagline: 'Missing in action since read receipt',
     color: 'border-cyan-800 text-cyan-400 bg-cyan-950/40'
   },
@@ -21,7 +22,7 @@ export const CAUSES_OF_DEATH: Record<CauseOfDeath, CauseOfDeathInfo> = {
     id: 'reaction_only',
     name: 'The Reaction-Only Fatality',
     flavor: 'Hearted, liked, or thumbed up as a conversational DNR order',
-    icon: '💔',
+    icon: HeartCrack,
     tagline: 'A double-tap straight through the aorta',
     color: 'border-amber-800 text-amber-400 bg-amber-950/40'
   },
@@ -29,7 +30,7 @@ export const CAUSES_OF_DEATH: Record<CauseOfDeath, CauseOfDeathInfo> = {
     id: 'topic_pivot',
     name: 'The Topic Pivot',
     flavor: 'Your emotional vulnerability was met with "anyway did you see that reel"',
-    icon: '🔀',
+    icon: Shuffle,
     tagline: 'Conversation abruptly derailed and buried in unmarked terrain',
     color: 'border-purple-800 text-purple-400 bg-purple-950/40'
   }

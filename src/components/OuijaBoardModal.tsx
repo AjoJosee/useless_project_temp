@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Grave } from '../types';
 import { askOuijaGhost } from '../lib/llm';
 import { sound } from '../lib/audio';
-import { X, Send, Ghost, Sparkles, AlertCircle } from 'lucide-react';
+import { X, Send, Ghost, Sparkles, AlertCircle, User } from 'lucide-react';
 
 interface OuijaBoardModalProps {
   grave: Grave | null;
@@ -113,11 +113,14 @@ export const OuijaBoardModal: React.FC<OuijaBoardModalProps> = ({
       setIsSpelling(true);
       sound.playGraveToll();
 
-      // Initial ghost inquiry
+      // Initial ghost inquiry — no prior history on first turn
       askOuijaGhost({
         cause: grave.cause_of_death,
         epitaph: grave.epitaph,
-        user_question: 'Are you at peace?'
+        user_question: 'Are you at peace?',
+        history: [],
+        victim_text: grave.victim_text,
+        time_of_death_hours: grave.time_of_death_hours,
       }).then((reply) => {
         animateSpelling(reply, () => {
           setMessages([
@@ -184,10 +187,16 @@ export const OuijaBoardModal: React.FC<OuijaBoardModalProps> = ({
       clearTimeout(escalationTimerRef.current);
     }
 
+    // Capture current messages before the new user entry is reflected in state
+    const currentMessages = messages.slice(-6);
+
     const reply = await askOuijaGhost({
       cause: grave.cause_of_death,
       epitaph: grave.epitaph,
-      user_question: question
+      user_question: question,
+      history: currentMessages.map(({ sender, text }) => ({ sender, text })),
+      victim_text: grave.victim_text,
+      time_of_death_hours: grave.time_of_death_hours,
     });
 
     animateSpelling(reply, () => {
@@ -229,7 +238,7 @@ export const OuijaBoardModal: React.FC<OuijaBoardModalProps> = ({
                 <h3 className="font-gothic text-xl font-bold tracking-wider text-emerald-300 sm:text-2xl">
                   PARANORMAL RIZZ: SEANCE COMMUNION
                 </h3>
-                <span className="rounded bg-emerald-950 px-2 py-0.5 font-mono text-[10px] text-emerald-400 border border-emerald-800">
+                <span className="rounded bg-emerald-950 px-2 py-0.5 font-mono text-[10px] text-emerald-400 border border-emerald-800 flicker-text">
                   SPIRIT AWAKENED
                 </span>
               </div>
@@ -365,7 +374,11 @@ export const OuijaBoardModal: React.FC<OuijaBoardModalProps> = ({
                 }`}
               >
                 <div className="flex items-center space-x-1.5 text-[10px] uppercase tracking-wider mb-1 opacity-70">
-                  <span>{m.sender === 'ghost' ? '👻 Needy Ghost' : '👤 You (Living Visitor)'}</span>
+                  {m.sender === 'ghost' ? (
+                    <><Ghost className="h-3 w-3" /><span>Needy Ghost</span></>
+                  ) : (
+                    <><User className="h-3 w-3" /><span>You (Living Visitor)</span></>
+                  )}
                   {m.isEscalation && <span>· [UNPROMPTED DOUBLE TEXT]</span>}
                 </div>
                 <p className="font-sans text-sm">{m.text}</p>

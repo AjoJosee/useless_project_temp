@@ -134,7 +134,7 @@ export const DeathCertificate: React.FC<DeathCertificateProps> = ({
                 OFFICIAL CAUSE OF DEATH
               </span>
               <div className="mt-1 flex items-center space-x-2">
-                <span className="text-lg">{causeInfo.icon}</span>
+                {(() => { const CauseIcon = causeInfo.icon; return <CauseIcon className="h-4 w-4 flex-shrink-0" />; })()}
                 <span className="font-bold text-zinc-900">{causeInfo.name}</span>
               </div>
               <p className="mt-1 text-[11px] text-zinc-600 font-sans">

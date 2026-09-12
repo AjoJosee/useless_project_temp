@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef, Suspense } from 'react';
+import React, { useEffect, useState, useRef, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Grave } from './../types';
 import { fetchAllGraves } from './../lib/storage';
@@ -11,6 +11,7 @@ import { OuijaBoardModal } from './../components/OuijaBoardModal';
 import { ExhumationDrawer } from './../components/ExhumationDrawer';
 import { GraveyardStatsModal } from './../components/GraveyardStatsModal';
 import { Footer } from './../components/Footer';
+import { JumpscareOverlay } from './../components/JumpscareOverlay';
 
 function MainGraveyardApp() {
   const [graves, setGraves] = useState<Grave[]>([]);
@@ -19,6 +20,17 @@ function MainGraveyardApp() {
   const [activeCommentsGrave, setActiveCommentsGrave] = useState<Grave | null>(null);
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  // --- Jumpscare state ---
+  const [jumpscareActive, setJumpscareActive] = useState(false);
+  // Tracks whether we've fired the guaranteed first-Ouija scare this session
+  const hasFirstOuijaFiredRef = useRef(false);
+  // If a Ouija open is queued behind an active scare, store the grave here
+  const pendingOuijaGraveRef = useRef<Grave | null>(null);
+  // Graveyard idle timer ref
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Whether the user is currently in the graveyard section
+  const isInGraveyardRef = useRef(false);
 
   const morgueRef = useRef<HTMLDivElement | null>(null);
   const graveyardRef = useRef<HTMLDivElement | null>(null);
@@ -50,12 +62,46 @@ function MainGraveyardApp() {
     }
   }, [searchParams, graves]);
 
+  // ---------------------------------------------------------------------------
+  // Idle graveyard jumpscare (1-in-8 chance after 25 s of no interaction)
+  // ---------------------------------------------------------------------------
+  const resetIdleTimer = useCallback(() => {
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    if (!isInGraveyardRef.current) return;
+
+    idleTimerRef.current = setTimeout(() => {
+      // Don't interrupt an open modal or an already-active scare
+      if (jumpscareActive || activeOuijaGrave) return;
+      if (Math.random() < 1 / 8) {
+        setJumpscareActive(true);
+      }
+    }, 25000);
+  }, [jumpscareActive, activeOuijaGrave]);
+
+  // Attach interaction listeners that reset the idle timer while in graveyard
+  useEffect(() => {
+    const events = ['scroll', 'mousemove', 'touchstart', 'keydown'] as const;
+    const handler = () => resetIdleTimer();
+    events.forEach((e) => window.addEventListener(e, handler, { passive: true }));
+    return () => {
+      events.forEach((e) => window.removeEventListener(e, handler));
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    };
+  }, [resetIdleTimer]);
+
+  // ---------------------------------------------------------------------------
+  // Navigation
+  // ---------------------------------------------------------------------------
   const handleNavigate = (section: 'morgue' | 'graveyard') => {
     setActiveSection(section);
+    isInGraveyardRef.current = section === 'graveyard';
+
     if (section === 'morgue') {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
       morgueRef.current?.scrollIntoView({ behavior: 'smooth' });
     } else {
       graveyardRef.current?.scrollIntoView({ behavior: 'smooth' });
+      resetIdleTimer();
     }
   };
 
@@ -63,10 +109,37 @@ function MainGraveyardApp() {
     setGraves((prev) => [newGrave, ...prev.filter((g) => g.id !== newGrave.id)]);
   };
 
+  // ---------------------------------------------------------------------------
+  // Ouija open — guaranteed first-open scare, then normal opens thereafter
+  // ---------------------------------------------------------------------------
+  const handleOpenOuija = (grave: Grave) => {
+    if (!hasFirstOuijaFiredRef.current) {
+      // First time: queue the grave, fire the scare, open modal in onDone()
+      hasFirstOuijaFiredRef.current = true;
+      pendingOuijaGraveRef.current = grave;
+      setJumpscareActive(true);
+    } else {
+      setActiveOuijaGrave(grave);
+    }
+  };
+
+  // Called when the jumpscare overlay finishes its fade-out
+  const handleJumpscareDone = () => {
+    setJumpscareActive(false);
+    // If a Ouija open was queued, open it now
+    if (pendingOuijaGraveRef.current) {
+      setActiveOuijaGrave(pendingOuijaGraveRef.current);
+      pendingOuijaGraveRef.current = null;
+    }
+  };
+
   const hauntedCount = graves.filter((g) => g.is_haunted).length;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#090a0f] text-zinc-100 selection:bg-red-800 selection:text-white">
+      {/* Fake jumpscare overlay — z-9999, above everything */}
+      <JumpscareOverlay active={jumpscareActive} onDone={handleJumpscareDone} />
+
       {/* Navigation Header */}
       <Header
         activeSection={activeSection}
@@ -101,7 +174,7 @@ function MainGraveyardApp() {
         <div ref={graveyardRef}>
           <GraveyardFeed
             graves={graves}
-            onOpenOuija={(grave) => setActiveOuijaGrave(grave)}
+            onOpenOuija={handleOpenOuija}
             onOpenComments={(grave) => setActiveCommentsGrave(grave)}
             onReactionUpdate={reloadGraves}
             onScrollToIntake={() => handleNavigate('morgue')}
@@ -144,3 +217,4 @@ export default function Home() {
     </Suspense>
   );
 }
+

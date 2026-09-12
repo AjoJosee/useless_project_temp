@@ -85,11 +85,11 @@ export const TombstoneCard: React.FC<TombstoneCardProps> = ({
           : 'border-zinc-800 hover:border-zinc-700 hover:shadow-2xl hover:scale-[1.01]'
       }`}
     >
-      {/* Splash Animation Overlay for Pour One Out */}
+      {/* Splash Animation Overlay for Pour One Out — CSS animation carries the visual */}
       {showSplash && (
         <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
-          <div className="animate-splash text-6xl select-none">
-            🍺💦
+          <div className="animate-splash">
+            <Beer className="h-14 w-14 text-yellow-400" />
           </div>
         </div>
       )}
@@ -98,7 +98,7 @@ export const TombstoneCard: React.FC<TombstoneCardProps> = ({
       {hasActiveIncense && (
         <div className="pointer-events-none absolute -top-8 right-6 z-20 flex space-x-1 select-none">
           <div className="relative">
-            <span className="text-xs">🕯️</span>
+            <Flame className="h-3.5 w-3.5 text-amber-400" />
             <div className="smoke-particle-1 absolute -top-3 left-1 text-base text-zinc-300 opacity-60">
               ~
             </div>
@@ -123,7 +123,7 @@ export const TombstoneCard: React.FC<TombstoneCardProps> = ({
         >
           <div className="flex items-center space-x-1.5">
             <Ghost className="h-4 w-4 text-emerald-400 animate-pulse" />
-            <span className="font-mono font-bold">HAUNTED REMAINS</span>
+            <span className="font-mono font-bold flicker-text">HAUNTED REMAINS</span>
           </div>
           <span className="font-mono text-[11px] underline underline-offset-2">
             Summon Spirit via Ouija &rarr;
@@ -134,7 +134,7 @@ export const TombstoneCard: React.FC<TombstoneCardProps> = ({
       {/* Tombstone Arch Top & Cause of Death */}
       <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
         <div className="flex items-center space-x-2">
-          <span className="text-xl" title={causeInfo.name}>{causeInfo.icon}</span>
+          {(() => { const CauseIcon = causeInfo.icon; return <CauseIcon className="h-4 w-4 flex-shrink-0" />; })()}
           <span className="font-mono text-xs font-semibold text-zinc-300 uppercase tracking-wider">
             {causeInfo.name}
           </span>
@@ -216,7 +216,7 @@ export const TombstoneCard: React.FC<TombstoneCardProps> = ({
           }`}
         >
           <div className="flex items-center space-x-1 text-xs">
-            <span>🕯️</span>
+            <Flame className="h-3.5 w-3.5" />
             <span className="font-mono font-bold text-xs">{incenseCount}</span>
           </div>
           <span className="text-[10px] font-mono text-zinc-500 mt-0.5">
@@ -238,7 +238,7 @@ export const TombstoneCard: React.FC<TombstoneCardProps> = ({
           }`}
         >
           <div className="flex items-center space-x-1 text-xs">
-            <span>🍺</span>
+            <Beer className="h-3.5 w-3.5" />
             <span className="font-mono font-bold text-xs">{pourCount}</span>
           </div>
           <span className="text-[10px] font-mono text-zinc-500 mt-0.5">Pour Out</span>
@@ -258,7 +258,7 @@ export const TombstoneCard: React.FC<TombstoneCardProps> = ({
           }`}
         >
           <div className="flex items-center space-x-1 text-xs">
-            <span>🎖️</span>
+            <Award className="h-3.5 w-3.5" />
             <span className="font-mono font-bold text-xs">{soldierCount}</span>
           </div>
           <span className="text-[10px] font-mono text-zinc-500 mt-0.5">Salute</span>

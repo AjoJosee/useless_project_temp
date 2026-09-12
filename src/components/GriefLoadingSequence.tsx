@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Shovel } from 'lucide-react';
 import { KUBLER_ROSS_STAGES } from '../lib/constants';
 import { sound } from '../lib/audio';
 
@@ -62,8 +63,9 @@ export const GriefLoadingSequence: React.FC<GriefLoadingSequenceProps> = ({
           <motion.span
             animate={{ rotate: [0, -25, 25, 0] }}
             transition={{ repeat: Infinity, duration: 1.5 }}
+            className="inline-flex"
           >
-            ⛏️
+            <Shovel className="h-6 w-6 text-red-400" />
           </motion.span>
         </div>
 

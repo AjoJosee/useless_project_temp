@@ -312,6 +312,85 @@ class SoundEngine {
       this.ambientRunning = false;
     }
   }
+
+  // Jumpscare Sting: sharp broadband noise burst + fast pitch-drop oscillator
+  // Visual overlay always fires; this method is only called when not muted.
+  public playJumpscareSting() {
+    if (this.isMuted) return;
+    const ctx = this.initCtx();
+    if (!ctx) return;
+
+    const t = ctx.currentTime;
+
+    // --- Layer 1: sharp broadband noise burst (the "hit") ---
+    const burstSize = Math.floor(ctx.sampleRate * 0.18);
+    const burstBuf = ctx.createBuffer(1, burstSize, ctx.sampleRate);
+    const burstData = burstBuf.getChannelData(0);
+    for (let i = 0; i < burstSize; i++) {
+      // Instant attack, fast exponential decay
+      burstData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.025));
+    }
+    const burstSrc = ctx.createBufferSource();
+    burstSrc.buffer = burstBuf;
+
+    const burstFilter = ctx.createBiquadFilter();
+    burstFilter.type = 'highpass';
+    burstFilter.frequency.setValueAtTime(800, t);
+
+    const burstGain = ctx.createGain();
+    burstGain.gain.setValueAtTime(0.0, t);
+    burstGain.gain.linearRampToValueAtTime(0.9, t + 0.005); // near-instant slam
+    burstGain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+
+    burstSrc.connect(burstFilter);
+    burstFilter.connect(burstGain);
+    burstGain.connect(ctx.destination);
+
+    // --- Layer 2: pitch-drop oscillator (the "scream drop") ---
+    const osc = ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(1400, t);           // start high and screechy
+    osc.frequency.exponentialRampToValueAtTime(60, t + 0.55); // drop fast
+
+    const oscGain = ctx.createGain();
+    oscGain.gain.setValueAtTime(0.0, t);
+    oscGain.gain.linearRampToValueAtTime(0.55, t + 0.01);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
+
+    // Slight distortion via waveshaper for extra harshness
+    const waveshaper = ctx.createWaveShaper();
+    const curve = new Float32Array(256);
+    for (let i = 0; i < 256; i++) {
+      const x = (i * 2) / 256 - 1;
+      curve[i] = (Math.PI + 200) * x / (Math.PI + 200 * Math.abs(x));
+    }
+    waveshaper.curve = curve;
+
+    osc.connect(waveshaper);
+    waveshaper.connect(oscGain);
+    oscGain.connect(ctx.destination);
+
+    // --- Layer 3: low sub-thud for physical impact feel ---
+    const subOsc = ctx.createOscillator();
+    subOsc.type = 'sine';
+    subOsc.frequency.setValueAtTime(90, t);
+    subOsc.frequency.exponentialRampToValueAtTime(25, t + 0.3);
+
+    const subGain = ctx.createGain();
+    subGain.gain.setValueAtTime(0.7, t);
+    subGain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+
+    subOsc.connect(subGain);
+    subGain.connect(ctx.destination);
+
+    // Fire everything
+    burstSrc.start(t);
+    burstSrc.stop(t + 0.2);
+    osc.start(t);
+    osc.stop(t + 0.6);
+    subOsc.start(t);
+    subOsc.stop(t + 0.35);
+  }
 }
 
 export const sound = new SoundEngine();

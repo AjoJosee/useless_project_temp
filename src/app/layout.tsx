@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { GrainOverlay } from "@/components/GrainOverlay";
 
 export const metadata: Metadata = {
   title: "REST IN READ — Digital Morgue for Dead Texts",
@@ -17,6 +18,8 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark h-full">
       <body className="min-h-full flex flex-col bg-[#090a0f] text-zinc-100 antialiased">
+        {/* Grain + vignette overlay — above page, below modals (z-40 vs z-50) */}
+        <GrainOverlay />
         {children}
       </body>
     </html>

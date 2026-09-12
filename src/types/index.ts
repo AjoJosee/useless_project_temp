@@ -1,3 +1,5 @@
+import type React from 'react';
+
 export type CauseOfDeath = 
   | 'one_word_assassin'
   | 'ghosting'
@@ -46,7 +48,7 @@ export interface CauseOfDeathInfo {
   id: CauseOfDeath;
   name: string;
   flavor: string;
-  icon: string;
+  icon: React.ComponentType<{ className?: string }>;
   tagline: string;
   color: string;
 }

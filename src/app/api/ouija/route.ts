@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 
-// ---------------------------------------------------------------------------
-// Extremely casual conversational fallback template system (no API key required)
-// ---------------------------------------------------------------------------
-
 type TemplateBucket = readonly string[];
 
 const CASUAL_FALLBACK_BUCKETS: Record<string, TemplateBucket> = {
@@ -121,7 +117,7 @@ export async function POST(req: NextRequest) {
       api_key?: string;
     } = body;
 
-    // Unprompted escalation double texts (extremely casual Gen-Z ghost style)
+    // Unprompted escalation double texts (casual Gen-Z ghost style)
     if (is_escalation) {
       const escalationLines = [
         "hello?? u there??",
@@ -135,21 +131,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: line, is_escalation: true });
     }
 
-    // Support API key from header, body, or server environment
-    const passedHeaderKey = req.headers.get('x-anthropic-key');
-    const effectiveApiKey = (api_key || passedHeaderKey || process.env.ANTHROPIC_API_KEY || '').trim();
+    const deathAge =
+      time_of_death_hours !== undefined
+        ? time_of_death_hours < 24
+          ? `${time_of_death_hours} hours ago`
+          : `${Math.round(time_of_death_hours / 24)} days ago`
+        : 'recently';
 
-    if (effectiveApiKey && !effectiveApiKey.includes('placeholder')) {
-      const anthropic = new Anthropic({ apiKey: effectiveApiKey });
-
-      const deathAge =
-        time_of_death_hours !== undefined
-          ? time_of_death_hours < 24
-            ? `${time_of_death_hours} hours ago`
-            : `${Math.round(time_of_death_hours / 24)} days ago`
-          : 'recently';
-
-      const systemPrompt = `You are the ghost of an ignored/unanswered text message that died from digital neglect. You are texting through a Ouija board right now.
+    const systemPrompt = `You are the ghost of an ignored/unanswered text message that died from digital neglect. You are texting through a Ouija board right now.
 
 CRITICAL TONE REQUIREMENTS:
 - EXTREMELY CASUAL, modern texting style (like texting a friend or crush on iMessage/IG).
@@ -167,48 +156,121 @@ GRAVE CONTEXT:
 
 Do NOT use quotation marks around your answer. Do NOT explain yourself. Just text back.`;
 
-      // Build real multi-turn conversation memory
-      const recentHistory = (history ?? []).slice(-8);
-      const claudeMessages: { role: 'user' | 'assistant'; content: string }[] = [];
+    const currentQ = (user_question || 'are you at peace?').trim();
 
-      for (const entry of recentHistory) {
-        // Ensure alternating sequence
-        const role = entry.sender === 'user' ? 'user' : 'assistant';
-        if (claudeMessages.length === 0 && role === 'assistant') {
-          // Claude messages must start with 'user'
-          claudeMessages.push({ role: 'user', content: 'are you at peace?' });
+    // 1. Check Google Gemini Key (Gemini 3.6 Flash)
+    const passedKey = (api_key || req.headers.get('x-api-key') || req.headers.get('x-gemini-key') || '').trim();
+    const geminiKey = (
+      (passedKey.startsWith('AQ.') || passedKey.startsWith('AIza')) ? passedKey : null
+    ) || process.env.GEMINI_API_KEY;
+
+    if (geminiKey && !geminiKey.includes('placeholder')) {
+      try {
+        const recentHistory = (history ?? []).slice(-8);
+        const geminiContents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
+
+        for (const entry of recentHistory) {
+          const role = entry.sender === 'user' ? 'user' : 'model';
+          if (geminiContents.length === 0 && role === 'model') {
+            geminiContents.push({ role: 'user', parts: [{ text: 'are you at peace?' }] });
+          }
+          geminiContents.push({
+            role,
+            parts: [{ text: entry.text }]
+          });
         }
-        claudeMessages.push({
-          role,
-          content: entry.text,
-        });
-      }
 
-      // Ensure last message is current user question
-      const currentQ = user_question ?? 'are you at peace?';
-      if (claudeMessages.length === 0 || claudeMessages[claudeMessages.length - 1].role !== 'user') {
-        claudeMessages.push({
-          role: 'user',
-          content: currentQ,
-        });
-      }
+        // Append current question
+        if (geminiContents.length === 0 || geminiContents[geminiContents.length - 1].role !== 'user') {
+          geminiContents.push({
+            role: 'user',
+            parts: [{ text: currentQ }]
+          });
+        }
 
-      const response = await anthropic.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 80,
-        temperature: 0.95,
-        system: systemPrompt,
-        messages: claudeMessages,
-      });
+                const modelsToTry = ['gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-flash-latest'];
+        for (const modelName of modelsToTry) {
+          try {
+            const geminiRes = await fetch(
+              `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiKey}`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                  },
+                  contents: geminiContents,
+                  generationConfig: {
+                    temperature: 0.95,
+                    maxOutputTokens: 1000
+                  }
+                })
+              }
+            );
 
-      const textBlock = response.content[0];
-      if (textBlock && 'text' in textBlock) {
-        const message = textBlock.text.trim().replace(/^["']|["']$/g, '');
-        return NextResponse.json({ message, source: 'claude' });
+            if (geminiRes.ok) {
+              const gData = await geminiRes.json();
+              const gText = gData?.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (gText) {
+                const message = gText.trim().replace(/^["']|["']$/g, '');
+                return NextResponse.json({ message, source: modelName });
+              }
+            } else {
+              const errTxt = await geminiRes.text();
+              console.warn(`Gemini ${modelName} returned non-ok, trying fallback model:`, errTxt.slice(0, 100));
+            }
+          } catch (mErr) {
+            console.warn(`Gemini ${modelName} failed:`, mErr);
+          }
+        }
+      } catch (geminiErr) {
+        console.warn('Gemini call failed, falling back:', geminiErr);
       }
     }
 
-    // Fallback casual response if no API key
+    // 2. Check Anthropic Claude Key
+    const claudeKey = (
+      (passedKey.startsWith('sk-ant-')) ? passedKey : null
+    ) || process.env.ANTHROPIC_API_KEY;
+
+    if (claudeKey && !claudeKey.includes('placeholder')) {
+      try {
+        const anthropic = new Anthropic({ apiKey: claudeKey });
+        const recentHistory = (history ?? []).slice(-8);
+        const claudeMessages: { role: 'user' | 'assistant'; content: string }[] = [];
+
+        for (const entry of recentHistory) {
+          const role = entry.sender === 'user' ? 'user' : 'assistant';
+          if (claudeMessages.length === 0 && role === 'assistant') {
+            claudeMessages.push({ role: 'user', content: 'are you at peace?' });
+          }
+          claudeMessages.push({ role, content: entry.text });
+        }
+
+        if (claudeMessages.length === 0 || claudeMessages[claudeMessages.length - 1].role !== 'user') {
+          claudeMessages.push({ role: 'user', content: currentQ });
+        }
+
+        const response = await anthropic.messages.create({
+          model: 'claude-3-5-sonnet-20241022',
+          max_tokens: 80,
+          temperature: 0.95,
+          system: systemPrompt,
+          messages: claudeMessages,
+        });
+
+        const textBlock = response.content[0];
+        if (textBlock && 'text' in textBlock) {
+          const message = textBlock.text.trim().replace(/^["']|["']$/g, '');
+          return NextResponse.json({ message, source: 'claude' });
+        }
+      } catch (claudeErr) {
+        console.warn('Claude call failed:', claudeErr);
+      }
+    }
+
+    // 3. Fallback casual response if no API key or network glitch
     const message = pickCasualFallback({ user_question, cause, victim_text, time_of_death_hours });
     return NextResponse.json({ message, source: 'fallback' });
   } catch (err: unknown) {
